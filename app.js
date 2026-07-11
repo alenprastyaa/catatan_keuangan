@@ -40,7 +40,17 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: err.message || 'Terjadi kesalahan pada server.' });
 });
 
+const initDb = require('./db/init');
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server berjalan di http://localhost:${PORT}`);
-});
+initDb()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server berjalan di http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('Gagal inisialisasi database:', err.message);
+    console.error('Pastikan MySQL berjalan dan kredensial di file .env sudah benar.');
+    process.exit(1);
+  });

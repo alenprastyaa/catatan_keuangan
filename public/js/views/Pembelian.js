@@ -28,6 +28,7 @@ export default {
         { key: 'no_transaksi', label: 'No. Transaksi' },
         { key: 'tanggal', label: 'Tanggal' },
         { key: 'supplier_nama', label: 'Supplier' },
+        { key: 'total_qty', label: 'Qty', align: 'right' },
         { key: 'total', label: 'Total', align: 'right' },
         { key: 'sudah_bayar', label: 'Terbayar', align: 'right' },
         { key: 'status', label: 'Status' },
@@ -220,7 +221,7 @@ export default {
             <label>Item Produk</label>
             <div class="table-wrap" style="margin-bottom:8px">
               <table>
-                <thead><tr><th>Produk</th><th style="width:80px">Qty</th><th style="width:130px">Harga</th><th style="width:130px" class="text-right">Subtotal</th><th></th></tr></thead>
+                <thead><tr><th>Produk</th><th style="width:120px">Qty</th><th style="width:160px">Harga</th><th style="width:140px" class="text-right">Subtotal</th><th></th></tr></thead>
                 <tbody>
                   <tr v-for="(it, idx) in form.items" :key="idx">
                     <td>
@@ -229,8 +230,8 @@ export default {
                         <option v-for="p in produkList" :key="p.id" :value="p.id">{{ p.nama_produk }}</option>
                       </select>
                     </td>
-                    <td><input type="number" min="1" v-model.number="it.qty" style="width:100%" /></td>
-                    <td><input type="number" min="0" v-model.number="it.harga_satuan" style="width:100%" /></td>
+                    <td><input type="number" min="1" v-model.number="it.qty" style="width:100%;padding:10px 8px" /></td>
+                    <td><input type="number" min="0" v-model.number="it.harga_satuan" style="width:100%;padding:10px 8px" /></td>
                     <td class="text-right">{{ rupiah(itemTotal(it)) }}</td>
                     <td><button type="button" class="btn-danger btn-sm" @click="removeItemRow(idx)">&times;</button></td>
                   </tr>

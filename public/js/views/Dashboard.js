@@ -214,6 +214,10 @@ export default {
   },
   template: `
     <div>
+      <div class="dash-brand">
+        <img src="/img/logo.png" alt="Mitrayasa" />
+      </div>
+
       <PeriodFilter v-model="periode" />
 
       <template v-if="summary">
@@ -251,6 +255,11 @@ export default {
             <div class="mini-value">{{ summary.total_produk }}</div>
           </div>
           <div class="mini-card">
+            <div class="icon-badge">&#128200;</div>
+            <div class="mini-label">Total Stok</div>
+            <div class="mini-value">{{ summary.total_stok }}</div>
+          </div>
+          <div class="mini-card">
             <div class="icon-badge danger">&darr;</div>
             <div class="mini-label">Total Hutang</div>
             <div class="mini-value">{{ rupiah(summary.total_hutang) }}</div>
@@ -265,13 +274,13 @@ export default {
         <div class="dash-grid-2">
           <div class="card chart-card">
             <div class="card-header-row"><h3>Grafik Penjualan</h3></div>
-            <div style="height:240px">
+            <div style="height:240px;width:100%;position:relative">
               <canvas ref="penjualanChart"></canvas>
             </div>
           </div>
           <div class="card chart-card">
             <div class="card-header-row"><h3>Grafik Pembelian</h3></div>
-            <div style="height:240px">
+            <div style="height:240px;width:100%;position:relative">
               <canvas ref="pembelianChart"></canvas>
             </div>
           </div>

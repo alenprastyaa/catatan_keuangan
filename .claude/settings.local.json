@@ -45,7 +45,15 @@
       "Bash(node --check public/js/components/Navbar.js)",
       "Bash(curl -sL \"https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js\")",
       "Bash(curl -sL \"https://upload-file.applicationservice.id/uploads/file-1783755683782614316-screenshot20260711at131012.png\" -o \"/Users/alenprastya/Documents/TIKTOK/Catatan keuangan/public/img/logo.png\")",
-      "Bash(curl -s -o /dev/null -w \"logo.png: %{http_code} %{content_type}\\\\n\" http://localhost:3000/img/logo.png)"
+      "Bash(curl -s -o /dev/null -w \"logo.png: %{http_code} %{content_type}\\\\n\" http://localhost:3000/img/logo.png)",
+      "Bash(node -e \"require\\('./controllers/laporan.controller.js'\\); require\\('./controllers/dashboard.controller.js'\\); require\\('./controllers/penjualan.controller.js'\\); require\\('./controllers/pembelian.controller.js'\\); require\\('./routes/laporan.routes.js'\\); console.log\\('OK: all controllers/routes load without syntax errors'\\)\")",
+      "Bash(node --input-type=module --check)",
+      "Bash(node -e \"require\\('./controllers/nota.controller.js'\\); console.log\\('OK: nota.controller.js'\\)\")",
+      "Bash(curl -sL -o /tmp/pwa-icon-source \"https://upload-file.applicationservice.id/uploads/file-1784044403999847707-chatgptimagejul142026105259pm.png\")",
+      "Bash(cp /tmp/pwa-icon-source \"/private/tmp/claude-501/-Users-alenprastya-Documents-TIKTOK-Catatan-keuangan/14893dbc-8a06-4fa7-94f1-8a9a49f8da1f/scratchpad/pwa-icon-preview.jpg\")",
+      "Bash(mkdir -p \"/private/tmp/claude-501/-Users-alenprastya-Documents-TIKTOK-Catatan-keuangan/14893dbc-8a06-4fa7-94f1-8a9a49f8da1f/scratchpad\")",
+      "Bash(python3 -c \"import PIL; print\\('PIL available', PIL.__version__\\)\")",
+      "Bash(python3)"
     ]
   }
 }

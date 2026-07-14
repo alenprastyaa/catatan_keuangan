@@ -11,6 +11,7 @@ router.get('/laba-rugi', ctrl.laporanLabaRugi);
 router.get('/kas', ctrl.laporanKas);
 router.get('/penjualan', ctrl.laporanPenjualan);
 router.get('/pembelian', ctrl.laporanPembelian);
+router.get('/pengeluaran', ctrl.laporanPengeluaran);
 router.get('/hutang-piutang', ctrl.laporanHutangPiutang);
 router.get('/data-supplier-konsumen', ctrl.dataSupplierKonsumen);
 

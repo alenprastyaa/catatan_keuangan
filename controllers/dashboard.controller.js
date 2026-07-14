@@ -19,6 +19,7 @@ const getSummary = asyncHandler(async (req, res) => {
   prevStart.setDate(prevStart.getDate() - (days - 1));
 
   const [[{ total_produk }]] = await pool.query('SELECT COUNT(*) AS total_produk FROM produk');
+  const [[{ total_stok }]] = await pool.query('SELECT COALESCE(SUM(stok),0) AS total_stok FROM produk');
 
   const [[{ masuk }]] = await pool.query('SELECT COALESCE(SUM(jumlah_bayar),0) AS masuk FROM penjualan_pembayaran');
   const [[{ keluar_beli }]] = await pool.query('SELECT COALESCE(SUM(jumlah_bayar),0) AS keluar_beli FROM pembelian_pembayaran');
@@ -59,6 +60,7 @@ const getSummary = asyncHandler(async (req, res) => {
   res.json({
     periode: { start, end },
     total_produk,
+    total_stok,
     kas_terkini: kasTerkini,
     total_penjualan,
     total_pembelian,

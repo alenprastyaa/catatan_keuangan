@@ -1,6 +1,10 @@
 import { store } from '../store.js';
+import { pwaState, promptInstall } from '../pwaInstall.js';
 
 export default {
+  setup() {
+    return { pwaState, promptInstall };
+  },
   data() {
     return { username: '', password: '', error: '', loading: false };
   },
@@ -37,6 +41,10 @@ export default {
 
         <button class="btn-primary" type="submit" :disabled="loading" style="width:100%">
           {{ loading ? 'Memproses...' : 'Masuk' }}
+        </button>
+
+        <button v-if="pwaState.canInstall" type="button" class="btn-secondary" style="width:100%;margin-top:10px" @click="promptInstall">
+          ⬇ Install Aplikasi
         </button>
       </form>
     </div>

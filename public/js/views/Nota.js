@@ -3,6 +3,7 @@ import { rupiah, todayStr, tanggalIndo } from '../format.js';
 import DataTable from '../components/DataTable.js';
 import Pagination from '../components/Pagination.js';
 import Modal from '../components/Modal.js';
+import { downloadInvoicePdf } from '../invoicePdf.js';
 
 const STATUS_BADGE = { paid: 'badge-success', unpaid: 'badge-warning', overdue: 'badge-danger' };
 
@@ -84,8 +85,9 @@ export default {
       this.detail = await api.get('/nota/' + row.id);
       this.showDetailModal = true;
     },
-    printInvoice() {
-      window.print();
+    async downloadPdf() {
+      if (!this.detail) return;
+      await downloadInvoicePdf(this.detail);
     },
   },
   watch: {
@@ -118,7 +120,7 @@ export default {
         <template #cell-jatuh_tempo="{ row }">{{ row.jatuh_tempo ? tanggalIndo(row.jatuh_tempo) : '-' }}</template>
         <template #cell-status="{ row }"><span class="badge" :class="statusBadge(row.status)">{{ row.status }}</span></template>
         <template #actions="{ row }">
-          <button class="btn-secondary btn-sm" @click="openDetail(row)">Lihat / Print</button>
+          <button class="btn-secondary btn-sm" @click="openDetail(row)">Lihat</button>
           <button class="btn-danger btn-sm" @click="remove(row)">Hapus</button>
         </template>
       </DataTable>
@@ -164,35 +166,41 @@ export default {
         </template>
       </Modal>
 
-      <Modal :show="showDetailModal" size="lg" title="Invoice" @close="showDetailModal = false">
-        <div v-if="detail" class="print-area">
-          <h2 style="margin-bottom:0">{{ detail.no_invoice }}</h2>
-          <p class="text-muted" style="margin-top:4px">
-            {{ detail.tipe === 'penjualan' ? 'Invoice Penjualan' : 'Invoice Pembelian' }}
-            &mdash; <span class="badge" :class="statusBadge(detail.status)">{{ detail.status }}</span>
-          </p>
-
-          <div class="field-row" style="margin:16px 0">
-            <div>
-              <div class="text-muted">Kepada / Dari</div>
-              <strong>{{ detail.transaksi?.pihak_nama || '-' }}</strong><br />
-              <span class="text-muted">{{ detail.transaksi?.pihak_alamat || '' }}</span><br />
-              <span class="text-muted">{{ detail.transaksi?.pihak_telepon || '' }}</span>
+      <Modal :show="showDetailModal" size="lg" title="" @close="showDetailModal = false">
+        <div v-if="detail" class="print-area invoice-doc">
+          <div class="invoice-header">
+            <div class="invoice-header-diagonal">
+              <span class="invoice-header-title">INVOICE</span>
             </div>
-            <div style="text-align:right">
-              <div class="text-muted">Tanggal: {{ tanggalIndo(detail.tanggal) }}</div>
-              <div class="text-muted">Jatuh Tempo: {{ detail.jatuh_tempo ? tanggalIndo(detail.jatuh_tempo) : '-' }}</div>
-              <div class="text-muted">No. Transaksi: {{ detail.transaksi?.no_transaksi }}</div>
+            <img class="invoice-header-logo" src="/img/logo.png" alt="Mitrayasa" />
+          </div>
+          <div class="invoice-meta-row">
+            <span>Invoice No: {{ detail.no_invoice }}</span>
+            <span>Date: {{ tanggalIndo(detail.tanggal) }}</span>
+          </div>
+          <div class="invoice-divider"></div>
+
+          <div class="invoice-info-grid">
+            <div>
+              <p><strong>No Invoice:</strong> {{ detail.no_invoice }}</p>
+              <p><strong>Tanggal:</strong> {{ tanggalIndo(detail.tanggal) }}</p>
+              <p><strong>Jatuh Tempo:</strong> {{ detail.jatuh_tempo ? tanggalIndo(detail.jatuh_tempo) : '-' }}</p>
+              <p><span class="badge" :class="statusBadge(detail.status)">{{ detail.status }}</span></p>
+            </div>
+            <div class="text-right">
+              <p><strong>Kepada Yth:</strong></p>
+              <p>{{ detail.transaksi?.pihak_nama || '-' }}</p>
+              <p class="text-muted">{{ detail.transaksi?.pihak_alamat || detail.transaksi?.pihak_telepon || '' }}</p>
             </div>
           </div>
 
-          <div class="table-wrap" style="margin-bottom:14px">
+          <div class="table-wrap invoice-table-wrap" style="margin-bottom:14px">
             <table>
               <thead><tr><th>Produk</th><th class="text-right">Qty</th><th class="text-right">Harga</th><th class="text-right">Subtotal</th></tr></thead>
               <tbody>
                 <tr v-for="it in detail.items" :key="it.id">
                   <td>{{ it.nama_produk }}</td>
-                  <td class="text-right">{{ it.qty }}</td>
+                  <td class="text-right">{{ it.satuan ? it.qty + ' ' + it.satuan : it.qty }}</td>
                   <td class="text-right">{{ rupiah(it.harga_satuan) }}</td>
                   <td class="text-right">{{ rupiah(it.subtotal) }}</td>
                 </tr>
@@ -200,10 +208,29 @@ export default {
             </table>
           </div>
 
-          <p style="text-align:right;font-size:1.1rem;font-weight:700">Total: {{ rupiah(detail.transaksi?.total) }}</p>
+          <div class="invoice-totals">
+            <div class="invoice-totals-box">
+              <div class="row"><span>Subtotal:</span><span>{{ rupiah(detail.transaksi?.total) }}</span></div>
+              <div class="row"><span>Pajak:</span><span>{{ rupiah(0) }}</span></div>
+              <div class="row total"><span>TOTAL:</span><span>{{ rupiah(detail.transaksi?.total) }}</span></div>
+            </div>
+          </div>
 
-          <div class="no-print" style="text-align:right;margin-top:10px">
-            <button class="btn-primary" @click="printInvoice">Print</button>
+          <div class="invoice-signature">
+            <p>Hormat kami,</p>
+            <img class="invoice-sign-logo" src="/img/logo.png" alt="Mitrayasa" />
+            <br/>
+            <br/>
+            <p class="text-muted invoice-payment-info">Pembayaran bisa ditransfer ke Bank BSI 7280830806 a.n. Fariz Amroeni</p>
+          </div>
+
+          <div class="invoice-footer">
+            <p><em>Terima kasih atas kepercayaan Anda</em></p>
+            <p>Jl. Pagerageung No. 28 Kab. Tasikmalaya - Jabar 46158 | Telp: 0813 8538 9191 | Email: mitrayasadairy@gmail.com</p>
+          </div>
+
+          <div class="no-print" style="text-align:right;margin-top:16px;display:flex;gap:8px;justify-content:flex-end">
+            <button class="btn-primary" @click="downloadPdf">⬇ Download PDF</button>
           </div>
         </div>
       </Modal>

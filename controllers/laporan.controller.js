@@ -143,6 +143,26 @@ const laporanHutangPiutang = asyncHandler(async (req, res) => {
   res.json({ hutang: withSisa(hutang), piutang: withSisa(piutang) });
 });
 
+const laporanPengeluaran = asyncHandler(async (req, res) => {
+  const { start, end } = resolvePeriode(req.query);
+
+  const [rows] = await pool.query(
+    'SELECT * FROM pengeluaran_kas WHERE tanggal BETWEEN ? AND ? ORDER BY tanggal, id',
+    [start, end]
+  );
+  const [[{ total }]] = await pool.query(
+    'SELECT COALESCE(SUM(jumlah),0) AS total FROM pengeluaran_kas WHERE tanggal BETWEEN ? AND ?',
+    [start, end]
+  );
+  const [byTipe] = await pool.query(
+    `SELECT tipe, COALESCE(SUM(jumlah),0) AS total FROM pengeluaran_kas
+     WHERE tanggal BETWEEN ? AND ? GROUP BY tipe ORDER BY total DESC`,
+    [start, end]
+  );
+
+  res.json({ periode: { start, end }, data: rows, total, by_tipe: byTipe });
+});
+
 const dataSupplierKonsumen = asyncHandler(async (req, res) => {
   const [supplier] = await pool.query("SELECT * FROM pelanggan_supplier ORDER BY nama");
   const [konsumen] = await pool.query('SELECT * FROM pembeli ORDER BY nama');
@@ -156,6 +176,7 @@ module.exports = {
   laporanKas,
   laporanPenjualan,
   laporanPembelian,
+  laporanPengeluaran,
   laporanHutangPiutang,
   dataSupplierKonsumen,
 };

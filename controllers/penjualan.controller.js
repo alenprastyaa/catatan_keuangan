@@ -31,7 +31,8 @@ const getPenjualan = asyncHandler(async (req, res) => {
 
   const [rows] = await pool.query(
     `SELECT p.*, b.nama AS pembeli_nama,
-       COALESCE((SELECT SUM(jumlah_bayar) FROM penjualan_pembayaran pp WHERE pp.penjualan_id = p.id), 0) AS sudah_bayar
+       COALESCE((SELECT SUM(jumlah_bayar) FROM penjualan_pembayaran pp WHERE pp.penjualan_id = p.id), 0) AS sudah_bayar,
+       COALESCE((SELECT SUM(qty) FROM penjualan_items pi WHERE pi.penjualan_id = p.id), 0) AS total_qty
      FROM penjualan p
      LEFT JOIN pembeli b ON b.id = p.pembeli_id
      ${where}

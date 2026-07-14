@@ -11,10 +11,11 @@ const TABS = [
   ['kas', 'Kas'],
   ['penjualan', 'Penjualan'],
   ['pembelian', 'Pembelian'],
+  ['pengeluaran', 'Pengeluaran'],
   ['hutang-piutang', 'Hutang/Piutang'],
   ['data-supplier-konsumen', 'Data Supplier & Konsumen'],
 ];
-const PERIOD_TABS = ['laba-rugi', 'kas', 'penjualan', 'pembelian'];
+const PERIOD_TABS = ['laba-rugi', 'kas', 'penjualan', 'pembelian', 'pengeluaran'];
 
 export default {
   components: { PeriodFilter },
@@ -95,6 +96,10 @@ export default {
         rows = [['No. Transaksi', 'Tanggal', 'Supplier', 'Status', 'Total'],
           ...r.data.map((x) => [x.no_transaksi, x.tanggal, x.supplier_nama, x.status, x.total]),
           [], ['', '', '', 'Total', r.total]];
+      } else if (this.activeTab === 'pengeluaran') {
+        rows = [['Tanggal', 'Tipe', 'Keterangan', 'Jumlah'],
+          ...r.data.map((x) => [x.tanggal, x.tipe, x.keterangan, x.jumlah]),
+          [], ['', '', 'Total', r.total]];
       } else if (this.activeTab === 'hutang-piutang') {
         rows = [['Jenis', 'No. Transaksi', 'Pihak', 'Tanggal', 'Jatuh Tempo', 'Total', 'Sudah Bayar', 'Sisa'],
           ...r.hutang.map((x) => ['Hutang', x.no_transaksi, x.pihak_nama, x.tanggal, x.jatuh_tempo, x.total, x.sudah_bayar, x.sisa]),
@@ -218,6 +223,22 @@ export default {
             foot: ['', '', '', 'Total', rupiah(this.result.total)],
             statusColumn: 3,
             columnStyles: { 4: { halign: 'right' } },
+          }],
+        });
+      } else if (this.activeTab === 'pengeluaran') {
+        downloadReportPdf({
+          ...common,
+          title: 'Laporan Pengeluaran',
+          stats: [
+            { label: 'Total Pengeluaran', value: rupiah(this.result.total), accent: [207, 52, 52] },
+            { label: 'Jumlah Catatan', value: this.result.data.length },
+          ],
+          sections: [{
+            heading: 'Rincian Pengeluaran',
+            columns: ['Tanggal', 'Tipe', 'Keterangan', 'Jumlah'],
+            rows: this.result.data.map((r) => [tanggalIndo(r.tanggal), r.tipe, r.keterangan || '-', rupiah(r.jumlah)]),
+            foot: ['', '', 'Total', rupiah(this.result.total)],
+            columnStyles: { 3: { halign: 'right' } },
           }],
         });
       } else if (this.activeTab === 'hutang-piutang') {
@@ -363,6 +384,26 @@ export default {
                 <tr v-for="r in result.data" :key="r.id">
                   <td>{{ r.no_transaksi }}</td><td>{{ tanggalIndo(r.tanggal) }}</td><td>{{ r.supplier_nama || '-' }}</td>
                   <td>{{ r.status }}</td><td class="text-right">{{ rupiah(r.total) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Pengeluaran -->
+        <div v-if="activeTab === 'pengeluaran'">
+          <div class="summary-grid">
+            <div class="card summary-card"><div class="label">Total Pengeluaran</div><div class="value">{{ rupiah(result.total) }}</div></div>
+            <div v-for="t in result.by_tipe" :key="t.tipe" class="card summary-card"><div class="label">{{ t.tipe }}</div><div class="value">{{ rupiah(t.total) }}</div></div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Tanggal</th><th>Tipe</th><th>Keterangan</th><th class="text-right">Jumlah</th></tr></thead>
+              <tbody>
+                <tr v-if="result.data.length === 0"><td colspan="4" class="empty-state">Tidak ada pengeluaran.</td></tr>
+                <tr v-for="r in result.data" :key="r.id">
+                  <td>{{ tanggalIndo(r.tanggal) }}</td><td>{{ r.tipe }}</td><td>{{ r.keterangan }}</td>
+                  <td class="text-right">{{ rupiah(r.jumlah) }}</td>
                 </tr>
               </tbody>
             </table>

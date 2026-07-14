@@ -1,6 +1,11 @@
+import { getLogoDataUrl, LOGO_RATIO } from './logo.js';
+
+const COMPANY_ADDRESS = 'Jl. Pagerageung No. 28 Kab. Tasikmalaya - Jabar 46158';
+const COMPANY_PHONE = '0813 8538 9191';
+const COMPANY_EMAIL = 'mitrayasadairy@gmail.com';
+
 const C = {
-  navy: [28, 30, 51],
-  navy2: [35, 38, 74],
+  navy: [33, 61, 138],
   primary: [79, 70, 229],
   accent: [124, 108, 246],
   text: [23, 28, 46],
@@ -26,87 +31,49 @@ const STATUS_COLOR = {
   unpaid: C.warning,
 };
 
-function withOpacity(doc, opacity, fn) {
-  doc.saveGraphicsState();
-  doc.setGState(new doc.GState({ opacity }));
-  fn();
-  doc.restoreGraphicsState();
-}
-
-function drawHeader(doc, { title, subtitle, meta }) {
+function drawHeader(doc, { title, subtitle, meta }, logoDataUrl) {
   const pageW = doc.internal.pageSize.getWidth();
-  const H = 34;
+  const H = 36;
+  const wBottom = pageW * 0.34;
+  const wTop = pageW * 0.44;
 
   doc.setFillColor(...C.navy);
-  doc.rect(0, 0, pageW, H, 'F');
+  doc.rect(0, 0, wBottom, H, 'F');
+  doc.triangle(wBottom, 0, wTop, 0, wBottom, H, 'F');
 
-  // dekorasi blob di kanan
-  withOpacity(doc, 0.1, () => {
-    doc.setFillColor(...C.accent);
-    doc.circle(pageW - 24, 4, 26, 'F');
-  });
-  withOpacity(doc, 0.14, () => {
-    doc.setFillColor(...C.primary);
-    doc.circle(pageW - 62, H + 6, 20, 'F');
-  });
-  withOpacity(doc, 0.08, () => {
-    doc.setFillColor(255, 255, 255);
-    doc.circle(pageW - 100, -6, 14, 'F');
-  });
-
-  // aksen garis bawah header
-  doc.setFillColor(...C.primary);
-  doc.rect(0, H, pageW * 0.38, 1.3, 'F');
-  doc.setFillColor(...C.accent);
-  doc.rect(pageW * 0.38, H, pageW * 0.62, 1.3, 'F');
-
-  // logo mark
-  doc.setFillColor(...C.primary);
-  doc.roundedRect(14, 7, 10.5, 10.5, 3, 3, 'F');
-  doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(6.8);
-  doc.text('Rp', 19.25, 13.1, { align: 'center' });
-
-  // brand
-  doc.setFontSize(11.5);
-  doc.text('Catatan Keuangan', 28.5, 11.6);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.2);
-  doc.setTextColor(...C.faint);
-  doc.text('F I N A N C E   R E P O R T', 28.5, 15.6);
-
-  // judul laporan
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
+  doc.setFontSize(15.5);
   doc.setTextColor(255, 255, 255);
-  doc.text(title, 14, 26.5);
+  doc.text(String(title).toUpperCase(), 14, 17, { maxWidth: wBottom - 20 });
 
   if (subtitle) {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.2);
-    doc.setTextColor(199, 203, 224);
-    doc.text(subtitle, 14, 31);
+    doc.setTextColor(203, 208, 232);
+    doc.text(subtitle, 14, 26, { maxWidth: wBottom - 20 });
   }
 
-  // meta chips di kanan
+  if (logoDataUrl) {
+    const logoW = Math.min(56, pageW * 0.24);
+    const logoH = logoW * LOGO_RATIO;
+    const logoX = pageW - 14 - logoW;
+    const logoY = (H - logoH) / 2 + 2;
+    doc.addImage(logoDataUrl, 'PNG', logoX, logoY, logoW, logoH);
+  }
+
+  let y = H + 9;
   if (meta && meta.length) {
-    doc.setFontSize(7.6);
-    let chipY = 8;
-    meta.forEach((line) => {
-      const w = doc.getTextWidth(line) + 8;
-      const x = pageW - 14 - w;
-      withOpacity(doc, 0.12, () => {
-        doc.setFillColor(255, 255, 255);
-        doc.roundedRect(x, chipY, w, 7.4, 3.7, 3.7, 'F');
-      });
-      doc.setTextColor(224, 227, 245);
-      doc.text(line, x + 4, chipY + 4.9);
-      chipY += 9.6;
-    });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.4);
+    doc.setTextColor(...C.text);
+    doc.text(meta.join('      '), pageW - 14, y, { align: 'right' });
   }
 
-  return H + 10;
+  y += 5;
+  doc.setFillColor(...C.navy);
+  doc.rect(0, y, pageW, 1, 'F');
+
+  return y + 10;
 }
 
 function drawStats(doc, stats, startY) {
@@ -143,7 +110,7 @@ function drawStats(doc, stats, startY) {
 }
 
 function drawSectionHeading(doc, heading, y) {
-  doc.setFillColor(...C.primary);
+  doc.setFillColor(...C.navy);
   doc.roundedRect(14, y - 3.4, 1.6, 4.6, 0.8, 0.8, 'F');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10.5);
@@ -161,19 +128,24 @@ function drawFooter(doc) {
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
 
-    doc.setFillColor(...C.primary);
-    doc.rect(14, pageH - 13.6, 26, 0.8, 'F');
-    doc.setFillColor(...C.border);
-    doc.rect(40, pageH - 13.6, pageW - 54, 0.8, 'F');
+    doc.setDrawColor(...C.border);
+    doc.setLineWidth(0.2);
+    doc.line(14, pageH - 16, pageW - 14, pageH - 16);
 
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7.6);
+    doc.setFontSize(7.4);
     doc.setTextColor(...C.text);
-    doc.text('Catatan Keuangan', 14, pageH - 8.2);
+    doc.text('MITRAYASA DAIRY NATURAL', 14, pageH - 10.5);
 
     doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
     doc.setTextColor(...C.muted);
-    doc.text(`Dicetak ${printedAt}`, 14 + doc.getTextWidth('Catatan Keuangan') + 4, pageH - 8.2);
+    doc.text(`${COMPANY_ADDRESS} | Telp: ${COMPANY_PHONE} | Email: ${COMPANY_EMAIL}`, 14, pageH - 6.5);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.8);
+    doc.setTextColor(...C.faint);
+    doc.text(`Dicetak ${printedAt}`, pageW - 14, pageH - 10.5, { align: 'right' });
 
     // pill nomor halaman
     const label = `${i} / ${pageCount}`;
@@ -181,9 +153,9 @@ function drawFooter(doc) {
     doc.setFontSize(7.4);
     const w = doc.getTextWidth(label) + 8;
     doc.setFillColor(...C.navy);
-    doc.roundedRect(pageW - 14 - w, pageH - 12.4, w, 6.6, 3.3, 3.3, 'F');
+    doc.roundedRect(pageW - 14 - w, pageH - 15, w, 6.6, 3.3, 3.3, 'F');
     doc.setTextColor(255, 255, 255);
-    doc.text(label, pageW - 14 - w / 2, pageH - 8, { align: 'center' });
+    doc.text(label, pageW - 14 - w / 2, pageH - 10.6, { align: 'center' });
   }
 }
 
@@ -199,10 +171,13 @@ function statusCellHook(statusColumn) {
   };
 }
 
-export function downloadReportPdf({ fileName, title, subtitle, meta = [], stats, sections, orientation = 'landscape' }) {
+export async function downloadReportPdf({ fileName, title, subtitle, meta = [], stats, sections, orientation = 'landscape' }) {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation, unit: 'mm', format: 'a4' });
-  let y = drawHeader(doc, { title, subtitle, meta });
+
+  const logoDataUrl = await getLogoDataUrl().catch(() => null);
+
+  let y = drawHeader(doc, { title, subtitle, meta }, logoDataUrl);
 
   if (stats && stats.length) {
     y = drawStats(doc, stats, y);

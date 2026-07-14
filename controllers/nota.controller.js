@@ -48,7 +48,7 @@ const getNotaById = asyncHandler(async (req, res) => {
       [nota.referensi_id]
     );
     const [items] = await pool.query(
-      `SELECT pi.*, pr.nama_produk FROM penjualan_items pi JOIN produk pr ON pr.id = pi.produk_id WHERE pi.penjualan_id = ?`,
+      `SELECT pi.*, pr.nama_produk, pr.satuan FROM penjualan_items pi JOIN produk pr ON pr.id = pi.produk_id WHERE pi.penjualan_id = ?`,
       [nota.referensi_id]
     );
     return res.json({ ...nota, transaksi: header, items });
@@ -60,7 +60,7 @@ const getNotaById = asyncHandler(async (req, res) => {
     [nota.referensi_id]
   );
   const [items] = await pool.query(
-    `SELECT pi.*, pr.nama_produk FROM pembelian_items pi JOIN produk pr ON pr.id = pi.produk_id WHERE pi.pembelian_id = ?`,
+    `SELECT pi.*, pr.nama_produk, pr.satuan FROM pembelian_items pi JOIN produk pr ON pr.id = pi.produk_id WHERE pi.pembelian_id = ?`,
     [nota.referensi_id]
   );
   res.json({ ...nota, transaksi: header, items });

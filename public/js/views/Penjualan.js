@@ -22,8 +22,9 @@ export default {
       loading: false, searchTimer: null,
       pembeliList: [], produkList: [],
       showFormModal: false, form: emptyForm(), error: '',
+      editDetail: null, editPayForm: { tanggal_bayar: todayStr(), jumlah_bayar: 0, keterangan: '' },
       showPembeliModal: false, pembeliForm: emptyPembeliForm(), pembeliError: '',
-      showDetailModal: false, detail: null, payForm: { tanggal_bayar: todayStr(), jumlah_bayar: 0, keterangan: '' },
+      showDetailModal: false, detail: null,
       columns: [
         { key: 'no_transaksi', label: 'No. Transaksi' },
         { key: 'tanggal', label: 'Tanggal' },
@@ -74,6 +75,7 @@ export default {
 
     openCreate() {
       this.form = emptyForm();
+      this.editDetail = null;
       this.error = '';
       this.showFormModal = true;
     },
@@ -84,8 +86,25 @@ export default {
         catatan: d.catatan || '', bayar_awal: 0,
         items: d.items.map((it) => ({ produk_id: it.produk_id, qty: it.qty, harga_satuan: it.harga_satuan })),
       };
+      this.editDetail = d;
+      this.editPayForm = { tanggal_bayar: todayStr(), jumlah_bayar: 0, keterangan: '' };
       this.error = '';
       this.showFormModal = true;
+    },
+    editSudahBayar() {
+      if (!this.editDetail) return 0;
+      return this.editDetail.pembayaran.reduce((s, p) => s + Number(p.jumlah_bayar), 0);
+    },
+    editSisaBayar() {
+      if (!this.editDetail) return 0;
+      return Number(this.editDetail.total) - this.editSudahBayar();
+    },
+    async submitEditPembayaran() {
+      if (!this.editPayForm.jumlah_bayar || this.editPayForm.jumlah_bayar <= 0) return;
+      await api.post('/penjualan/' + this.form.id + '/pembayaran', this.editPayForm);
+      this.editDetail = await api.get('/penjualan/' + this.form.id);
+      this.editPayForm = { tanggal_bayar: todayStr(), jumlah_bayar: 0, keterangan: '' };
+      this.load();
     },
     addItemRow() {
       this.form.items.push({ produk_id: '', qty: 1, harga_satuan: 0 });
@@ -148,20 +167,12 @@ export default {
     },
     async openDetail(row) {
       this.detail = await api.get('/penjualan/' + row.id);
-      this.payForm = { tanggal_bayar: todayStr(), jumlah_bayar: 0, keterangan: '' };
       this.showDetailModal = true;
     },
     sisaBayar() {
       if (!this.detail) return 0;
       const bayar = this.detail.pembayaran.reduce((s, p) => s + Number(p.jumlah_bayar), 0);
       return Number(this.detail.total) - bayar;
-    },
-    async submitPembayaran() {
-      if (!this.payForm.jumlah_bayar || this.payForm.jumlah_bayar <= 0) return;
-      await api.post('/penjualan/' + this.detail.id + '/pembayaran', this.payForm);
-      this.detail = await api.get('/penjualan/' + this.detail.id);
-      this.payForm = { tanggal_bayar: todayStr(), jumlah_bayar: 0, keterangan: '' };
-      this.load();
     },
   },
   template: `
@@ -217,14 +228,35 @@ export default {
               <label>Jatuh Tempo</label>
               <input type="date" v-model="form.jatuh_tempo" style="width:100%" />
             </div>
-            <div class="field">
+            <div v-if="!form.id" class="field">
               <label>Bayar Awal</label>
-              <input type="number" min="0" v-model.number="form.bayar_awal" :disabled="!!form.id" style="width:100%" />
+              <input type="number" min="0" v-model.number="form.bayar_awal" style="width:100%" />
             </div>
           </div>
           <div class="field">
             <label>Catatan</label>
             <input v-model="form.catatan" style="width:100%" />
+          </div>
+
+          <div v-if="form.id && editDetail" class="field" style="background:var(--bg-soft,#f6f6f8);border-radius:8px;padding:10px 12px;margin-bottom:14px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <strong>Status Pembayaran</strong>
+              <span class="badge" :class="statusBadge(editDetail.status)">{{ editDetail.status }}</span>
+            </div>
+            <p style="margin:0 0 8px">Total: {{ rupiah(editDetail.total) }} &nbsp;|&nbsp; Sudah Dibayar: {{ rupiah(editSudahBayar()) }} &nbsp;|&nbsp; Sisa: <strong>{{ rupiah(editSisaBayar()) }}</strong></p>
+            <div v-if="editDetail.status !== 'lunas'" class="field-row" style="align-items:flex-end;margin:0">
+              <div class="field">
+                <label>Tanggal Bayar</label>
+                <input type="date" v-model="editPayForm.tanggal_bayar" style="width:100%" />
+              </div>
+              <div class="field">
+                <label>Jumlah Bayar</label>
+                <input type="number" min="0" v-model.number="editPayForm.jumlah_bayar" style="width:100%" />
+              </div>
+              <div class="field">
+                <button type="button" class="btn-primary" @click="submitEditPembayaran">Catat Pembayaran</button>
+              </div>
+            </div>
           </div>
 
           <div class="field">
@@ -315,20 +347,7 @@ export default {
           </div>
 
           <p style="text-align:right">Total: {{ rupiah(detail.total) }} &nbsp;|&nbsp; Sisa: <strong>{{ rupiah(sisaBayar()) }}</strong></p>
-
-          <div v-if="detail.status !== 'lunas'" class="field-row" style="align-items:flex-end">
-            <div class="field">
-              <label>Tanggal Bayar</label>
-              <input type="date" v-model="payForm.tanggal_bayar" style="width:100%" />
-            </div>
-            <div class="field">
-              <label>Jumlah Bayar</label>
-              <input type="number" min="0" v-model.number="payForm.jumlah_bayar" style="width:100%" />
-            </div>
-            <div class="field" style="margin-bottom:14px">
-              <button type="button" class="btn-primary" @click="submitPembayaran">Catat Pembayaran</button>
-            </div>
-          </div>
+          <p v-if="detail.status !== 'lunas'" class="text-muted" style="text-align:right;font-size:0.85rem">Gunakan tombol "Edit" untuk mencatat pembayaran.</p>
         </div>
       </Modal>
     </div>

@@ -98,19 +98,25 @@ export default {
   },
   template: `
     <div>
-      <div class="toolbar">
-        <input type="text" v-model="search" @input="onFilterChange" placeholder="Cari no. invoice..." style="width:220px" />
-        <select v-model="tipe" @change="onFilterChange">
-          <option value="">Semua Tipe</option>
-          <option value="penjualan">Penjualan</option>
-          <option value="pembelian">Pembelian</option>
-        </select>
-        <select v-model="status" @change="onFilterChange">
-          <option value="">Semua Status</option>
-          <option value="paid">Paid</option>
-          <option value="unpaid">Unpaid</option>
-          <option value="overdue">Overdue</option>
-        </select>
+      <div class="toolbar filter-toolbar">
+        <div class="filter-disclosure">
+          <input id="filter-nota" class="filter-toggle-control" type="checkbox" />
+          <label for="filter-nota" class="filter-toggle"><span>Filter data</span><span class="filter-chevron">⌄</span></label>
+          <div class="filter-fields">
+            <input type="text" v-model="search" @input="onFilterChange" placeholder="Cari no. invoice..." style="width:220px" />
+            <select v-model="tipe" @change="onFilterChange">
+              <option value="">Semua Tipe</option>
+              <option value="penjualan">Penjualan</option>
+              <option value="pembelian">Pembelian</option>
+            </select>
+            <select v-model="status" @change="onFilterChange">
+              <option value="">Semua Status</option>
+              <option value="paid">Paid</option>
+              <option value="unpaid">Unpaid</option>
+              <option value="overdue">Overdue</option>
+            </select>
+          </div>
+        </div>
         <div class="spacer"></div>
         <button class="btn-primary" @click="openCreate">+ Tambah Invoice</button>
       </div>

@@ -293,11 +293,13 @@ export default {
         <button v-for="t in tabs" :key="t[0]" :class="{ active: activeTab === t[0] }" @click="switchTab(t[0])">{{ t[1] }}</button>
       </div>
 
-      <div class="toolbar">
-        <PeriodFilter v-if="usesPeriod" v-model="periode" style="margin-bottom:0" />
+      <div class="toolbar report-toolbar">
+        <div class="report-period"><PeriodFilter v-if="usesPeriod" v-model="periode" style="margin-bottom:0" /></div>
         <div class="spacer"></div>
-        <button class="btn-secondary" :disabled="!result || loading" @click="exportExcel">⬇ Excel</button>
-        <button class="btn-primary" :disabled="!result || loading" @click="downloadPdf">⬇ Download PDF</button>
+        <div class="report-actions">
+          <button class="btn-secondary" :disabled="!result || loading" @click="exportExcel">⬇ Excel</button>
+          <button class="btn-primary" :disabled="!result || loading" @click="downloadPdf">⬇ PDF</button>
+        </div>
       </div>
 
       <div v-if="loading" class="empty-state">Memuat laporan...</div>

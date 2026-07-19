@@ -177,17 +177,23 @@ export default {
   },
   template: `
     <div>
-      <div class="toolbar">
-        <input type="text" v-model="search" @input="onFilterChange" placeholder="Cari no. transaksi / pembeli..." style="width:240px" />
-        <select v-model="status" @change="onFilterChange">
-          <option value="">Semua Status</option>
-          <option value="lunas">Lunas</option>
-          <option value="piutang">Piutang</option>
-          <option value="sebagian">Sebagian</option>
-        </select>
-        <input type="date" v-model="start" @change="onFilterChange" />
-        <span class="text-muted">s/d</span>
-        <input type="date" v-model="end" @change="onFilterChange" />
+      <div class="toolbar filter-toolbar">
+        <div class="filter-disclosure">
+          <input id="filter-penjualan" class="filter-toggle-control" type="checkbox" />
+          <label for="filter-penjualan" class="filter-toggle"><span>Filter data</span><span class="filter-chevron">⌄</span></label>
+          <div class="filter-fields">
+            <input type="text" v-model="search" @input="onFilterChange" placeholder="Cari no. transaksi / pembeli..." style="width:240px" />
+            <select v-model="status" @change="onFilterChange">
+              <option value="">Semua Status</option>
+              <option value="lunas">Lunas</option>
+              <option value="piutang">Piutang</option>
+              <option value="sebagian">Sebagian</option>
+            </select>
+            <input type="date" v-model="start" @change="onFilterChange" />
+            <span class="text-muted filter-separator">s/d</span>
+            <input type="date" v-model="end" @change="onFilterChange" />
+          </div>
+        </div>
         <div class="spacer"></div>
         <button class="btn-primary" @click="openCreate">+ Tambah Penjualan</button>
       </div>
@@ -261,21 +267,21 @@ export default {
 
           <div class="field">
             <label>Item Produk</label>
-            <div class="table-wrap" style="margin-bottom:8px">
-              <table>
+            <div class="table-wrap product-items-wrap" style="margin-bottom:8px">
+              <table class="product-items-table">
                 <thead><tr><th>Produk</th><th style="width:120px">Qty</th><th style="width:160px">Harga</th><th style="width:140px" class="text-right">Subtotal</th><th></th></tr></thead>
                 <tbody>
                   <tr v-for="(it, idx) in form.items" :key="idx">
-                    <td>
+                    <td data-label="Produk">
                       <select v-model.number="it.produk_id" @change="onProdukChange(it)" style="width:100%">
                         <option value="">- Pilih -</option>
                         <option v-for="p in produkList" :key="p.id" :value="p.id" :disabled="!form.id && Number(p.stok) <= 0">{{ p.nama_produk }} (stok: {{ p.stok }})</option>
                       </select>
                     </td>
-                    <td><input type="number" min="1" v-model.number="it.qty" style="width:100%;padding:10px 8px" /></td>
-                    <td><input type="number" min="0" v-model.number="it.harga_satuan" style="width:100%;padding:10px 8px" /></td>
-                    <td class="text-right">{{ rupiah(itemTotal(it)) }}</td>
-                    <td><button type="button" class="btn-danger btn-sm" @click="removeItemRow(idx)">&times;</button></td>
+                    <td data-label="Qty"><input type="number" min="1" v-model.number="it.qty" style="width:100%;padding:10px 8px" /></td>
+                    <td data-label="Harga"><input type="number" min="0" v-model.number="it.harga_satuan" style="width:100%;padding:10px 8px" /></td>
+                    <td data-label="Subtotal" class="text-right product-item-subtotal">{{ rupiah(itemTotal(it)) }}</td>
+                    <td class="product-item-action"><button type="button" class="btn-danger btn-sm" @click="removeItemRow(idx)">&times;</button></td>
                   </tr>
                 </tbody>
               </table>

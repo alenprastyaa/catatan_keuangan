@@ -214,16 +214,17 @@ export default {
   },
   template: `
     <div>
-      <div class="dash-brand">
-        <img src="/img/logo.png" alt="Mitrayasa" />
-      </div>
-
       <PeriodFilter v-model="periode" />
 
       <template v-if="summary">
         <div class="dash-hero">
           <div class="dash-hero-pattern"></div>
-          <span class="dash-hero-badge">Ringkasan Kas</span>
+          <div class="dash-hero-header">
+            <span class="dash-hero-badge">Ringkasan Kas</span>
+            <div class="dash-hero-logo">
+              <img src="/img/logo.png" alt="Mitrayasa" />
+            </div>
+          </div>
           <div class="dash-hero-body">
             <div>
               <div class="dash-balance-label">Kas Terkini</div>
@@ -274,13 +275,13 @@ export default {
         <div class="dash-grid-2">
           <div class="card chart-card">
             <div class="card-header-row"><h3>Grafik Penjualan</h3></div>
-            <div style="height:240px;width:100%;position:relative">
+            <div class="chart-canvas-wrap">
               <canvas ref="penjualanChart"></canvas>
             </div>
           </div>
           <div class="card chart-card">
             <div class="card-header-row"><h3>Grafik Pembelian</h3></div>
-            <div style="height:240px;width:100%;position:relative">
+            <div class="chart-canvas-wrap">
               <canvas ref="pembelianChart"></canvas>
             </div>
           </div>

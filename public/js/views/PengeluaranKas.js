@@ -75,12 +75,18 @@ export default {
   },
   template: `
     <div>
-      <div class="toolbar">
-        <input type="text" v-model="search" @input="onFilterChange" placeholder="Cari keterangan / tipe..." style="width:240px" />
-        <input type="text" v-model="tipe" @input="onFilterChange" placeholder="Filter tipe..." style="width:160px" />
-        <input type="date" v-model="start" @change="onFilterChange" />
-        <span class="text-muted">s/d</span>
-        <input type="date" v-model="end" @change="onFilterChange" />
+      <div class="toolbar filter-toolbar">
+        <div class="filter-disclosure">
+          <input id="filter-kas" class="filter-toggle-control" type="checkbox" />
+          <label for="filter-kas" class="filter-toggle"><span>Filter data</span><span class="filter-chevron">⌄</span></label>
+          <div class="filter-fields">
+            <input type="text" v-model="search" @input="onFilterChange" placeholder="Cari keterangan / tipe..." style="width:240px" />
+            <input type="text" v-model="tipe" @input="onFilterChange" placeholder="Filter tipe..." style="width:160px" />
+            <input type="date" v-model="start" @change="onFilterChange" />
+            <span class="text-muted filter-separator">s/d</span>
+            <input type="date" v-model="end" @change="onFilterChange" />
+          </div>
+        </div>
         <div class="spacer"></div>
         <button class="btn-primary" @click="openCreate">+ Tambah Pengeluaran</button>
       </div>

@@ -12,20 +12,30 @@ export default {
     },
   },
   template: `
-    <div class="toolbar">
-      <button
-        v-for="p in [['today','Hari Ini'],['week','Minggu Ini'],['month','Bulan Ini']]"
-        :key="p[0]"
-        :class="modelValue.period === p[0] ? 'btn-primary' : 'btn-secondary'"
-        class="btn-sm"
-        @click="setPeriod(p[0])"
-      >{{ p[1] }}</button>
+    <div class="period-filter" aria-label="Filter periode dashboard">
+      <div class="period-presets">
+        <button
+          v-for="p in [['today','Hari ini'],['week','Minggu'],['month','Bulan'],['custom','Rentang']]"
+          :key="p[0]"
+          type="button"
+          :class="{ active: modelValue.period === p[0] }"
+          @click="setPeriod(p[0])"
+        >{{ p[1] }}</button>
+      </div>
 
-      <input type="date" :value="modelValue.start"
-        @change="setDate('start', $event.target.value)" />
-      <span class="text-muted">s/d</span>
-      <input type="date" :value="modelValue.end"
-        @change="setDate('end', $event.target.value)" />
+      <div v-if="modelValue.period === 'custom'" class="period-custom-range">
+        <label>
+          <span>Dari tanggal</span>
+          <input type="date" :value="modelValue.start"
+            @change="setDate('start', $event.target.value)" />
+        </label>
+        <span class="period-range-arrow" aria-hidden="true">→</span>
+        <label>
+          <span>Sampai tanggal</span>
+          <input type="date" :value="modelValue.end"
+            @change="setDate('end', $event.target.value)" />
+        </label>
+      </div>
     </div>
   `,
 };

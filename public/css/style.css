@@ -265,19 +265,6 @@ a { color: inherit; text-decoration: none; }
 @media (max-width: 900px) { .chart-grid { grid-template-columns: 1fr; } }
 
 /* ===== Dashboard ===== */
-.dash-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-.dash-brand img { height: 34px; width: auto; display: block; }
-.dash-brand span {
-  font-weight: 800;
-  font-size: 1.15rem;
-  letter-spacing: 0.06em;
-  color: var(--text);
-}
 
 .dash-hero {
   position: relative;
@@ -303,6 +290,15 @@ a { color: inherit; text-decoration: none; }
   mask-image: radial-gradient(closest-side, #000, transparent);
   -webkit-mask-image: radial-gradient(closest-side, #000, transparent);
 }
+.dash-hero-header {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
 .dash-hero-badge {
   position: relative;
   display: inline-block;
@@ -313,9 +309,21 @@ a { color: inherit; text-decoration: none; }
   font-size: 0.73rem;
   font-weight: 600;
   letter-spacing: 0.03em;
-  margin-bottom: 18px;
   backdrop-filter: blur(4px);
 }
+.dash-hero-logo {
+  width: 156px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border-radius: 13px;
+  background: rgba(255,255,255,0.94);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.16);
+}
+.dash-hero-logo img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .dash-hero-body {
   position: relative;
   z-index: 1;
@@ -392,6 +400,7 @@ a { color: inherit; text-decoration: none; }
 @media (max-width: 900px) { .dash-grid-2 { grid-template-columns: 1fr; } }
 
 .chart-card canvas { max-width: 100%; }
+.chart-canvas-wrap { height: 240px; width: 100%; position: relative; }
 
 .card-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 .card-header-row h3 { margin: 0; font-size: 0.98rem; font-weight: 700; letter-spacing: -0.01em; }
@@ -437,6 +446,67 @@ a { color: inherit; text-decoration: none; }
   margin-bottom: 16px;
 }
 .toolbar .spacer { flex: 1; }
+.filter-disclosure { display: contents; }
+.filter-toggle-control,
+.filter-toggle { display: none; }
+.filter-disclosure > .filter-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.filter-chevron { transition: transform 0.18s ease; }
+.filter-toggle-control:checked + .filter-toggle .filter-chevron { transform: rotate(180deg); }
+.report-actions { display: flex; gap: 10px; }
+
+/* ===== Period filter ===== */
+.period-filter {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.period-presets {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(76px, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.period-presets button {
+  min-height: 36px;
+  padding: 7px 13px;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
+  box-shadow: none;
+}
+.period-presets button:hover { color: var(--text); background: var(--bg); }
+.period-presets button.active {
+  color: #fff;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  box-shadow: 0 4px 12px rgba(79,70,229,0.28);
+}
+.period-custom-range {
+  display: grid;
+  grid-template-columns: minmax(145px, 1fr) auto minmax(145px, 1fr);
+  align-items: end;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.period-custom-range label { margin: 0; min-width: 0; }
+.period-custom-range label span { display: block; margin: 0 0 5px 2px; font-size: 0.68rem; }
+.period-custom-range input { width: 100%; min-width: 0; padding: 8px 10px; box-shadow: none; }
+.period-range-arrow { align-self: center; color: var(--text-muted); padding-top: 17px; }
 
 /* ===== Form controls ===== */
 input, select, textarea {
@@ -761,6 +831,9 @@ tbody tr:hover { background: #f8f9fd; }
 @media (max-width: 900px) {
   .navbar { padding: 10px 20px; }
   .content { padding: 18px 20px 28px; }
+  .period-filter { align-items: stretch; flex-direction: column; }
+  .period-presets { width: 100%; }
+  .period-custom-range { width: 100%; }
 }
 
 @media (max-width: 640px) {
@@ -779,14 +852,148 @@ tbody tr:hover { background: #f8f9fd; }
   .toolbar > select,
   .toolbar > button { width: 100% !important; max-width: none; }
 
+  .filter-toolbar { flex-direction: row; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .filter-toolbar > button { width: auto !important; min-height: 42px; flex-shrink: 0; }
+  .filter-disclosure {
+    display: block;
+    flex: 1 1 110px;
+    min-width: 0;
+  }
+  .filter-toggle-control { display: none; }
+  .filter-toggle {
+    min-height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 13px;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.82rem;
+    font-weight: 600;
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    list-style: none;
+    margin: 0;
+  }
+  .filter-toggle-control:not(:checked) ~ .filter-fields { display: none; }
+  .filter-disclosure:has(.filter-toggle-control:checked) { flex-basis: 100%; order: 3; }
+  .filter-toggle-control:checked + .filter-toggle {
+    color: var(--primary);
+    border-color: #d8dbfa;
+    background: var(--primary-soft);
+  }
+  .filter-disclosure > .filter-fields {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
+  .filter-disclosure .filter-fields > input,
+  .filter-disclosure .filter-fields > select { width: 100% !important; max-width: none; }
+  .filter-disclosure .filter-separator { display: none; }
+
+  .report-toolbar { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  .report-period { min-width: 0; }
+  .report-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .report-actions button { width: 100%; padding-left: 8px; padding-right: 8px; }
+
   .modal-overlay { padding: 10px; }
   .modal-box { padding: 20px 18px; }
 
+  .period-filter { margin-bottom: 12px; gap: 8px; }
+  .period-presets { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .period-presets button { min-height: 34px; min-width: 0; padding: 6px 3px; font-size: 0.72rem; }
+  .period-custom-range { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; padding: 10px; }
+  .period-range-arrow { display: none; }
+  .period-custom-range input { font-size: 0.78rem; padding: 8px 7px; }
+
   .summary-card .value { font-size: 1.2rem; }
-  .dash-hero { padding: 22px 20px; border-radius: 18px; }
-  .dash-balance-value { font-size: 1.8rem; }
-  .dash-hero-body { align-items: flex-start; }
-  .dash-hero-stat { padding: 9px 13px 9px 9px; }
+  .dash-hero { padding: 18px; border-radius: 18px; margin-bottom: 12px; }
+  .dash-hero-header { margin-bottom: 16px; }
+  .dash-hero-badge { font-size: 0.68rem; padding: 5px 10px; }
+  .dash-hero-logo { width: 118px; height: 39px; padding: 7px 9px; border-radius: 11px; }
+  .dash-balance-value { font-size: clamp(1.55rem, 8vw, 1.95rem); overflow-wrap: anywhere; }
+  .dash-hero-body { align-items: flex-start; gap: 18px; }
+  .dash-hero-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; gap: 8px; }
+  .dash-hero-stat { min-width: 0; padding: 9px; gap: 8px; }
+  .dash-hero-stat-icon { width: 32px; height: 32px; border-radius: 9px; }
+  .dash-hero-stat .stat-value { font-size: 0.78rem; overflow-wrap: anywhere; }
+  .growth-chip { display: block; width: fit-content; margin: 4px 0 0; }
+
+  .mini-card-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+  .mini-card { padding: 13px; border-radius: 14px; }
+  .mini-card .icon-badge { width: 32px; height: 32px; border-radius: 10px; margin-bottom: 10px; }
+  .mini-card .mini-value { font-size: 1.05rem; overflow-wrap: anywhere; }
+
+  .dash-grid-2 { gap: 12px; margin-bottom: 12px; }
+  .card { padding: 16px; }
+  .card-header-row { margin-bottom: 12px; }
+  .chart-canvas-wrap { height: 210px; }
+  .donut-wrap { width: 180px; height: 180px; }
+  .cashflow-legend { align-items: flex-start; gap: 8px 16px; }
+  .cashflow-legend .legend-item { flex-wrap: wrap; }
+  .txn-row { gap: 9px; }
+  .txn-icon { width: 34px; height: 34px; border-radius: 10px; }
+  .txn-amount { font-size: 0.78rem; }
+
+  /* Item produk di modal transaksi: susun vertikal agar angka tidak terpotong. */
+  .product-items-wrap { overflow: visible; border: 0; box-shadow: none; background: transparent; }
+  .product-items-table,
+  .product-items-table tbody { display: block; width: 100%; }
+  .product-items-table thead { display: none; }
+  .product-items-table tr {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    margin-bottom: 12px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
+  .product-items-table tr:last-child { margin-bottom: 0; }
+  .product-items-table tbody tr:hover { background: var(--surface); }
+  .product-items-table td {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    text-align: left;
+  }
+  .product-items-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin: 0 0 5px 2px;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+  .product-items-table select,
+  .product-items-table input { width: 100% !important; min-width: 0; }
+  .product-items-table .product-item-subtotal {
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--bg);
+    font-size: 1rem;
+    font-weight: 700;
+  }
+  .product-items-table .product-item-subtotal::before { margin-left: 0; }
+  .product-items-table .product-item-action { text-align: right; }
+  .product-items-table .product-item-action button {
+    width: 40px !important;
+    min-height: 36px;
+    font-size: 1.1rem;
+  }
 
   .pagination { justify-content: center; text-align: center; }
 }

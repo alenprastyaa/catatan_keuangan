@@ -163,8 +163,14 @@ export default {
 
       <!-- Pelanggan / Supplier -->
       <div v-if="activeTab === 'pelanggan-supplier'">
-        <div class="toolbar">
-          <input type="text" v-model="ps.search" @input="onPsFilter" placeholder="Cari nama, telepon, email..." style="width:260px" />
+        <div class="toolbar filter-toolbar">
+          <div class="filter-disclosure">
+            <input id="filter-ps" class="filter-toggle-control" type="checkbox" />
+            <label for="filter-ps" class="filter-toggle"><span>Filter data</span><span class="filter-chevron">⌄</span></label>
+            <div class="filter-fields">
+              <input type="text" v-model="ps.search" @input="onPsFilter" placeholder="Cari nama, telepon, email..." style="width:260px" />
+            </div>
+          </div>
           <div class="spacer"></div>
           <button class="btn-primary" @click="openPsCreate">+ Tambah</button>
         </div>
@@ -203,8 +209,14 @@ export default {
 
       <!-- Pembeli -->
       <div v-if="activeTab === 'pembeli'">
-        <div class="toolbar">
-          <input type="text" v-model="pb.search" @input="onPbFilter" placeholder="Cari nama, telepon..." style="width:260px" />
+        <div class="toolbar filter-toolbar">
+          <div class="filter-disclosure">
+            <input id="filter-pb" class="filter-toggle-control" type="checkbox" />
+            <label for="filter-pb" class="filter-toggle"><span>Filter data</span><span class="filter-chevron">⌄</span></label>
+            <div class="filter-fields">
+              <input type="text" v-model="pb.search" @input="onPbFilter" placeholder="Cari nama, telepon..." style="width:260px" />
+            </div>
+          </div>
           <div class="spacer"></div>
           <button class="btn-primary" @click="openPbCreate">+ Tambah</button>
         </div>
@@ -232,8 +244,14 @@ export default {
 
       <!-- Admin -->
       <div v-if="activeTab === 'admin'">
-        <div class="toolbar">
-          <input type="text" v-model="ad.search" @input="onAdFilter" placeholder="Cari nama, username, email..." style="width:260px" />
+        <div class="toolbar filter-toolbar">
+          <div class="filter-disclosure">
+            <input id="filter-admin" class="filter-toggle-control" type="checkbox" />
+            <label for="filter-admin" class="filter-toggle"><span>Filter data</span><span class="filter-chevron">⌄</span></label>
+            <div class="filter-fields">
+              <input type="text" v-model="ad.search" @input="onAdFilter" placeholder="Cari nama, username, email..." style="width:260px" />
+            </div>
+          </div>
           <div class="spacer"></div>
           <button class="btn-primary" @click="openAdCreate">+ Tambah Admin</button>
         </div>

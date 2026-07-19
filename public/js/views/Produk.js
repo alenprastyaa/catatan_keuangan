@@ -79,8 +79,14 @@ export default {
   },
   template: `
     <div>
-      <div class="toolbar">
-        <input type="text" v-model="search" @input="onSearch" placeholder="Cari kode, nama, kategori..." style="width:280px" />
+      <div class="toolbar filter-toolbar">
+        <div class="filter-disclosure">
+          <input id="filter-produk" class="filter-toggle-control" type="checkbox" />
+          <label for="filter-produk" class="filter-toggle"><span>Filter data</span><span class="filter-chevron">⌄</span></label>
+          <div class="filter-fields">
+            <input type="text" v-model="search" @input="onSearch" placeholder="Cari kode, nama, kategori..." style="width:280px" />
+          </div>
+        </div>
         <div class="spacer"></div>
         <button class="btn-primary" @click="openCreate">+ Tambah Produk</button>
       </div>

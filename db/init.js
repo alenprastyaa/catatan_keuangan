@@ -21,6 +21,14 @@ async function initDb() {
   await conn.end();
 
   const pool = require('../config/db');
+
+  // CREATE TABLE IF NOT EXISTS tidak menambah kolom baru pada instalasi lama.
+  // Migrasi kecil ini menjaga database yang sudah berjalan tetap kompatibel.
+  const [keteranganColumns] = await pool.query("SHOW COLUMNS FROM nota LIKE 'keterangan'");
+  if (keteranganColumns.length === 0) {
+    await pool.query('ALTER TABLE nota ADD COLUMN keterangan TEXT NULL AFTER status');
+  }
+
   const [[{ n }]] = await pool.query('SELECT COUNT(*) AS n FROM admins');
   if (n === 0) {
     const hash = await bcrypt.hash('admin123', 10);

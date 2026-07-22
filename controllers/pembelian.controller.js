@@ -112,9 +112,9 @@ const createPembelian = asyncHandler(async (req, res) => {
 
     if (buat_nota) {
       await conn.query(
-        `INSERT INTO nota (no_invoice, tipe, referensi_id, tanggal, jatuh_tempo, status)
-         VALUES (?, 'pembelian', ?, ?, ?, ?)`,
-        ['INV-' + Date.now(), pembelianId, tanggal, jatuh_tempo || null, status === 'lunas' ? 'paid' : 'unpaid']
+        `INSERT INTO nota (no_invoice, tipe, referensi_id, tanggal, jatuh_tempo, status, keterangan)
+         VALUES (?, 'pembelian', ?, ?, ?, ?, ?)`,
+        ['INV-' + Date.now(), pembelianId, tanggal, jatuh_tempo || null, status === 'lunas' ? 'paid' : 'unpaid', catatan?.trim() || null]
       );
     }
 

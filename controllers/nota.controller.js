@@ -1,6 +1,14 @@
 const pool = require('../config/db');
 const asyncHandler = require('../utils/asyncHandler');
 
+function normalizeKeterangan(value) {
+  return typeof value === 'string' ? value.trim() || null : null;
+}
+
+function keteranganTerlaluPanjang(value) {
+  return typeof value === 'string' && value.length > 1000;
+}
+
 async function syncOverdue() {
   await pool.query(
     `UPDATE nota SET status = 'overdue'
@@ -67,22 +75,34 @@ const getNotaById = asyncHandler(async (req, res) => {
 });
 
 const createNota = asyncHandler(async (req, res) => {
-  const { no_invoice, tipe, referensi_id, tanggal, jatuh_tempo, status } = req.body;
+  const { no_invoice, tipe, referensi_id, tanggal, jatuh_tempo, status, keterangan } = req.body;
   if (!no_invoice || !tipe || !referensi_id || !tanggal) {
     return res.status(400).json({ message: 'No invoice, tipe, referensi, dan tanggal wajib diisi.' });
   }
+  if (keteranganTerlaluPanjang(keterangan)) {
+    return res.status(400).json({ message: 'Keterangan maksimal 1000 karakter.' });
+  }
   const [result] = await pool.query(
-    `INSERT INTO nota (no_invoice, tipe, referensi_id, tanggal, jatuh_tempo, status)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [no_invoice, tipe, referensi_id, tanggal, jatuh_tempo || null, status || 'unpaid']
+    `INSERT INTO nota (no_invoice, tipe, referensi_id, tanggal, jatuh_tempo, status, keterangan)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [no_invoice, tipe, referensi_id, tanggal, jatuh_tempo || null, status || 'unpaid', normalizeKeterangan(keterangan)]
   );
   res.status(201).json({ id: result.insertId });
 });
 
 const updateNota = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { jatuh_tempo, status } = req.body;
-  await pool.query('UPDATE nota SET jatuh_tempo=?, status=? WHERE id=?', [jatuh_tempo || null, status, id]);
+  const { jatuh_tempo, status, keterangan } = req.body;
+  if (!['paid', 'unpaid', 'overdue'].includes(status)) {
+    return res.status(400).json({ message: 'Status invoice tidak valid.' });
+  }
+  if (keteranganTerlaluPanjang(keterangan)) {
+    return res.status(400).json({ message: 'Keterangan maksimal 1000 karakter.' });
+  }
+  await pool.query(
+    'UPDATE nota SET jatuh_tempo=?, status=?, keterangan=? WHERE id=?',
+    [jatuh_tempo || null, status, normalizeKeterangan(keterangan), id]
+  );
   res.json({ message: 'Nota berhasil diperbarui.' });
 });
 

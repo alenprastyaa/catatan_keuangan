@@ -9,8 +9,10 @@ const STATUS_BADGE = { paid: 'badge-success', unpaid: 'badge-warning', overdue: 
 
 const emptyForm = () => ({
   no_invoice: 'INV-' + Date.now(), tipe: 'penjualan', referensi_id: '',
-  tanggal: todayStr(), jatuh_tempo: '', status: 'unpaid',
+  tanggal: todayStr(), jatuh_tempo: '', status: 'unpaid', keterangan: '',
 });
+
+const dateInput = (value) => value ? String(value).slice(0, 10) : '';
 
 export default {
   components: { DataTable, Pagination, Modal },
@@ -21,6 +23,7 @@ export default {
       loading: false, searchTimer: null,
       referensiList: [],
       showFormModal: false, form: emptyForm(), error: '',
+      showEditModal: false, editForm: { id: null, jatuh_tempo: '', status: 'unpaid', keterangan: '' }, editError: '',
       showDetailModal: false, detail: null,
       columns: [
         { key: 'no_invoice', label: 'No. Invoice' },
@@ -81,6 +84,29 @@ export default {
       await api.delete('/nota/' + row.id);
       this.load();
     },
+    openEdit(row) {
+      this.editForm = {
+        id: row.id,
+        jatuh_tempo: dateInput(row.jatuh_tempo),
+        status: row.status,
+        keterangan: row.keterangan || '',
+      };
+      this.editError = '';
+      this.showEditModal = true;
+    },
+    async saveEdit() {
+      this.editError = '';
+      try {
+        await api.put('/nota/' + this.editForm.id, this.editForm);
+        this.showEditModal = false;
+        await this.load();
+        if (this.detail?.id === this.editForm.id) {
+          this.detail = await api.get('/nota/' + this.editForm.id);
+        }
+      } catch (err) {
+        this.editError = err.message;
+      }
+    },
     async openDetail(row) {
       this.detail = await api.get('/nota/' + row.id);
       this.showDetailModal = true;
@@ -127,6 +153,7 @@ export default {
         <template #cell-status="{ row }"><span class="badge" :class="statusBadge(row.status)">{{ row.status }}</span></template>
         <template #actions="{ row }">
           <button class="btn-secondary btn-sm" @click="openDetail(row)">Lihat</button>
+          <button class="btn-secondary btn-sm" @click="openEdit(row)">Edit</button>
           <button class="btn-danger btn-sm" @click="remove(row)">Hapus</button>
         </template>
       </DataTable>
@@ -164,11 +191,43 @@ export default {
               <input type="date" v-model="form.jatuh_tempo" style="width:100%" />
             </div>
           </div>
+          <div class="field">
+            <label>Keterangan</label>
+            <textarea v-model="form.keterangan" rows="3" maxlength="1000" style="width:100%" placeholder="Contoh: Termin pembayaran, pesan untuk pelanggan, atau informasi tambahan"></textarea>
+          </div>
           <p v-if="error" class="error-text">{{ error }}</p>
         </form>
         <template #footer>
           <button class="btn-secondary" @click="showFormModal = false">Batal</button>
           <button class="btn-primary" @click="save">Simpan</button>
+        </template>
+      </Modal>
+
+      <Modal :show="showEditModal" title="Edit Invoice" @close="showEditModal = false">
+        <form @submit.prevent="saveEdit">
+          <div class="field-row">
+            <div class="field">
+              <label>Jatuh Tempo</label>
+              <input type="date" v-model="editForm.jatuh_tempo" style="width:100%" />
+            </div>
+            <div class="field">
+              <label>Status</label>
+              <select v-model="editForm.status" style="width:100%">
+                <option value="paid">Paid</option>
+                <option value="unpaid">Unpaid</option>
+                <option value="overdue">Overdue</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label>Keterangan</label>
+            <textarea v-model="editForm.keterangan" rows="4" maxlength="1000" style="width:100%" placeholder="Tulis keterangan yang akan tampil di invoice"></textarea>
+          </div>
+          <p v-if="editError" class="error-text">{{ editError }}</p>
+        </form>
+        <template #footer>
+          <button class="btn-secondary" @click="showEditModal = false">Batal</button>
+          <button class="btn-primary" @click="saveEdit">Simpan Perubahan</button>
         </template>
       </Modal>
 
@@ -220,6 +279,11 @@ export default {
               <div class="row"><span>Pajak:</span><span>{{ rupiah(0) }}</span></div>
               <div class="row total"><span>TOTAL:</span><span>{{ rupiah(detail.transaksi?.total) }}</span></div>
             </div>
+          </div>
+
+          <div v-if="detail.keterangan" class="invoice-notes">
+            <strong>Keterangan:</strong>
+            <p>{{ detail.keterangan }}</p>
           </div>
 
           <div class="invoice-signature">

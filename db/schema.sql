@@ -170,6 +170,7 @@ CREATE TABLE IF NOT EXISTS nota (
   tanggal DATE NOT NULL,
   jatuh_tempo DATE,
   status ENUM('paid','unpaid','overdue') DEFAULT 'unpaid',
+  keterangan TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

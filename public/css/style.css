@@ -771,6 +771,9 @@ tbody tr:hover { background: #f8f9fd; }
 .invoice-totals-box .row { display: flex; justify-content: space-between; font-size: 0.86rem; padding: 4px 0; color: var(--text-muted); }
 .invoice-totals-box .row.total { border-top: 2px solid #21398a; margin-top: 6px; padding-top: 10px; font-size: 1.05rem; font-weight: 800; color: var(--text); }
 
+.invoice-notes { max-width: 520px; margin: 12px 0 18px; padding: 12px 14px; background: var(--bg); border-left: 3px solid #21398a; border-radius: 0 8px 8px 0; font-size: 0.86rem; }
+.invoice-notes p { margin: 5px 0 0; color: var(--text-muted); white-space: pre-wrap; overflow-wrap: anywhere; }
+
 .invoice-signature { margin-top: 6px; }
 .invoice-signature p { margin: 4px 0; font-size: 0.86rem; }
 .invoice-sign-logo { height: 34px; width: auto; margin: 6px 0; display: block; }

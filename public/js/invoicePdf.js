@@ -164,6 +164,36 @@ function drawTotals(doc, { subtotal, pajak, total }, startY) {
   return lineY + 18;
 }
 
+function drawKeterangan(doc, keterangan, startY) {
+  if (!keterangan) return startY;
+
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const lines = doc.splitTextToSize(String(keterangan), pageW - 40);
+  const boxH = 13 + lines.length * 4.5;
+  let y = startY;
+
+  if (y + boxH > pageH - 36) {
+    doc.addPage();
+    y = 18;
+  }
+
+  doc.setFillColor(...LIGHT_GREY);
+  doc.setDrawColor(...BORDER);
+  doc.roundedRect(14, y, pageW - 28, boxH, 2, 2, 'FD');
+  doc.setFillColor(...NAVY);
+  doc.rect(14, y, 1.2, boxH, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...TEXT);
+  doc.text('Keterangan:', 19, y + 7);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...MUTED);
+  doc.text(lines, 19, y + 13);
+
+  return y + boxH + 8;
+}
+
 function drawSignature(doc, logoDataUrl, startY) {
   let y = startY;
   doc.setFont('helvetica', 'normal');
@@ -222,6 +252,7 @@ export async function downloadInvoicePdf(detail) {
   }, y);
   y = drawItemsTable(doc, detail.items, y);
   y = drawTotals(doc, { subtotal: detail.transaksi?.total, pajak: 0, total: detail.transaksi?.total }, y);
+  y = drawKeterangan(doc, detail.keterangan, y);
   drawSignature(doc, logoDataUrl, y);
   drawFooter(doc);
 

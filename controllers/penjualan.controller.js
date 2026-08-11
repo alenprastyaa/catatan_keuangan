@@ -32,7 +32,8 @@ const getPenjualan = asyncHandler(async (req, res) => {
   const [rows] = await pool.query(
     `SELECT p.*, b.nama AS pembeli_nama,
        COALESCE((SELECT SUM(jumlah_bayar) FROM penjualan_pembayaran pp WHERE pp.penjualan_id = p.id), 0) AS sudah_bayar,
-       COALESCE((SELECT SUM(qty) FROM penjualan_items pi WHERE pi.penjualan_id = p.id), 0) AS total_qty
+       COALESCE((SELECT SUM(qty) FROM penjualan_items pi WHERE pi.penjualan_id = p.id), 0) AS total_qty,
+       (COALESCE(p.volume_pagi,0) + COALESCE(p.volume_sore,0)) AS volume_liter
      FROM penjualan p
      LEFT JOIN pembeli b ON b.id = p.pembeli_id
      ${where}
@@ -71,7 +72,8 @@ const getPenjualanById = asyncHandler(async (req, res) => {
 });
 
 const createPenjualan = asyncHandler(async (req, res) => {
-  const { pembeli_id, tanggal, jatuh_tempo, catatan, items = [], bayar_awal = 0, buat_nota = false } = req.body;
+  const { pembeli_id, tanggal, jatuh_tempo, catatan, items = [], bayar_awal = 0, buat_nota = false,
+    volume_pagi = 0, volume_sore = 0 } = req.body;
 
   if (!tanggal || items.length === 0) {
     return res.status(400).json({ message: 'Tanggal dan minimal satu item wajib diisi.' });
@@ -98,9 +100,9 @@ const createPenjualan = asyncHandler(async (req, res) => {
     }
 
     const [result] = await conn.query(
-      `INSERT INTO penjualan (no_transaksi, pembeli_id, tanggal, total, status, jatuh_tempo, catatan)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [noTransaksi, pembeli_id || null, tanggal, total, status, jatuh_tempo || null, catatan || null]
+      `INSERT INTO penjualan (no_transaksi, pembeli_id, tanggal, total, status, jatuh_tempo, catatan, volume_pagi, volume_sore)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [noTransaksi, pembeli_id || null, tanggal, total, status, jatuh_tempo || null, catatan || null, volume_pagi || 0, volume_sore || 0]
     );
     const penjualanId = result.insertId;
 
@@ -142,7 +144,7 @@ const createPenjualan = asyncHandler(async (req, res) => {
 
 const updatePenjualan = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { pembeli_id, tanggal, jatuh_tempo, catatan, items } = req.body;
+  const { pembeli_id, tanggal, jatuh_tempo, catatan, items, volume_pagi = 0, volume_sore = 0 } = req.body;
 
   const conn = await pool.getConnection();
   try {
@@ -186,8 +188,8 @@ const updatePenjualan = asyncHandler(async (req, res) => {
     const status = hitungStatus(total, sudah_bayar);
 
     await conn.query(
-      `UPDATE penjualan SET pembeli_id=?, tanggal=?, total=?, status=?, jatuh_tempo=?, catatan=? WHERE id=?`,
-      [pembeli_id || null, tanggal, total, status, jatuh_tempo || null, catatan || null, id]
+      `UPDATE penjualan SET pembeli_id=?, tanggal=?, total=?, status=?, jatuh_tempo=?, catatan=?, volume_pagi=?, volume_sore=? WHERE id=?`,
+      [pembeli_id || null, tanggal, total, status, jatuh_tempo || null, catatan || null, volume_pagi || 0, volume_sore || 0, id]
     );
 
     await conn.commit();

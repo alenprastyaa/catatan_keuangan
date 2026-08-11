@@ -104,7 +104,8 @@ const laporanPenjualan = asyncHandler(async (req, res) => {
     'SELECT COALESCE(SUM(total),0) AS total FROM penjualan WHERE tanggal BETWEEN ? AND ?',
     [start, end]
   );
-  res.json({ periode: { start, end }, data: rows, total });
+  const totalVolume = rows.reduce((sum, row) => sum + Number(row.volume_pagi || 0) + Number(row.volume_sore || 0), 0);
+  res.json({ periode: { start, end }, data: rows, total, total_volume: totalVolume });
 });
 
 const laporanPembelian = asyncHandler(async (req, res) => {
@@ -119,7 +120,8 @@ const laporanPembelian = asyncHandler(async (req, res) => {
     'SELECT COALESCE(SUM(total),0) AS total FROM pembelian WHERE tanggal BETWEEN ? AND ?',
     [start, end]
   );
-  res.json({ periode: { start, end }, data: rows, total });
+  const totalVolume = rows.reduce((sum, row) => sum + Number(row.volume_pagi || 0) + Number(row.volume_sore || 0), 0);
+  res.json({ periode: { start, end }, data: rows, total, total_volume: totalVolume });
 });
 
 const laporanHutangPiutang = asyncHandler(async (req, res) => {
@@ -169,6 +171,45 @@ const dataSupplierKonsumen = asyncHandler(async (req, res) => {
   res.json({ supplier, konsumen });
 });
 
+const laporanIndividu = asyncHandler(async (req, res) => {
+  const { tipe = 'supplier', id = '' } = req.query;
+  if (!['supplier', 'pembeli'].includes(tipe)) return res.status(400).json({ message: 'Tipe individu tidak valid.' });
+
+  const [options] = tipe === 'supplier'
+    ? await pool.query("SELECT id, nama, telepon, alamat FROM pelanggan_supplier WHERE tipe IN ('supplier','keduanya') ORDER BY nama")
+    : await pool.query('SELECT id, nama, telepon, alamat FROM pembeli ORDER BY nama');
+  if (!id) return res.json({ tipe, options, individu: null, transaksi: [], ringkasan: null });
+  const { start, end } = resolvePeriode(req.query);
+
+  const individu = options.find((row) => Number(row.id) === Number(id));
+  if (!individu) return res.status(404).json({ message: 'Data individu tidak ditemukan.' });
+  const dateSql = ' AND t.tanggal BETWEEN ? AND ?';
+  const params = [id, start, end];
+  let transaksi;
+  if (tipe === 'supplier') {
+    [transaksi] = await pool.query(
+      `SELECT t.*, (COALESCE(t.volume_pagi,0)+COALESCE(t.volume_sore,0)) AS volume_liter,
+       COALESCE((SELECT SUM(jumlah_bayar) FROM pembelian_pembayaran p WHERE p.pembelian_id=t.id),0) AS sudah_bayar
+       FROM pembelian t WHERE t.supplier_id=?${dateSql} ORDER BY t.tanggal, t.id`, params
+    );
+  } else {
+    [transaksi] = await pool.query(
+      `SELECT t.*, (COALESCE(t.volume_pagi,0)+COALESCE(t.volume_sore,0)) AS volume_liter,
+       COALESCE((SELECT SUM(jumlah_bayar) FROM penjualan_pembayaran p WHERE p.penjualan_id=t.id),0) AS sudah_bayar
+       FROM penjualan t WHERE t.pembeli_id=?${dateSql} ORDER BY t.tanggal, t.id`, params
+    );
+  }
+  const ringkasan = transaksi.reduce((acc, row) => {
+    acc.jumlah_transaksi += 1;
+    acc.total_volume += Number(row.volume_liter || 0);
+    acc.total_nilai += Number(row.total || 0);
+    acc.total_bayar += Number(row.sudah_bayar || 0);
+    acc.sisa += Number(row.total || 0) - Number(row.sudah_bayar || 0);
+    return acc;
+  }, { jumlah_transaksi: 0, total_volume: 0, total_nilai: 0, total_bayar: 0, sisa: 0 });
+  res.json({ tipe, options, individu, transaksi, ringkasan, periode: { start, end } });
+});
+
 module.exports = {
   laporanPelangganSupplier,
   laporanPembeli,
@@ -179,4 +220,5 @@ module.exports = {
   laporanPengeluaran,
   laporanHutangPiutang,
   dataSupplierKonsumen,
+  laporanIndividu,
 };

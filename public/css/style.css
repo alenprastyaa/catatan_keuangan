@@ -215,6 +215,9 @@ a { color: inherit; text-decoration: none; }
 .btn-install { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
 .btn-install svg { width: 15px; height: 15px; }
 @media (max-width: 640px) {
+  .quality-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .manual-item-row { grid-template-columns:1fr 72px; }
+  .individual-filter-card { flex-direction:column; align-items:stretch; }
   .btn-install span { display: none; }
   .btn-install { padding: 8px; }
 }
@@ -371,6 +374,22 @@ a { color: inherit; text-decoration: none; }
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 .mini-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.clickable-card { cursor: pointer; }
+.clickable-card:focus-visible { outline: 3px solid rgba(79,70,229,.25); outline-offset: 2px; }
+.milk-data-card, .manual-invoice-box, .individual-filter-card, .individual-profile { background:var(--surface,#fff); border:1px solid var(--border,#e5e7eb); border-radius:12px; padding:14px; margin-bottom:14px; }
+.milk-data-title { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; }
+.milk-data-title span { color:var(--primary,#4f46e5); background:rgba(79,70,229,.09); padding:4px 9px; border-radius:999px; font-size:.8rem; font-weight:700; }
+.quality-grid { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; }
+.quality-grid .field { margin:0; }
+.quality-grid input { width:100%; min-width:0; }
+.transaction-metrics { display:flex; flex-wrap:wrap; gap:8px 20px; padding:10px 12px; background:var(--bg-soft,#f6f7fb); border-radius:9px; margin-bottom:14px; font-size:.86rem; }
+.manual-invoice-toggle { display:flex; gap:8px; align-items:center; margin:2px 0 14px; font-weight:600; cursor:pointer; }
+.manual-item-row { display:grid; grid-template-columns:minmax(150px,2fr) 80px 90px minmax(110px,1fr) 36px; gap:7px; margin:8px 0; }
+.individual-filter-card { display:flex; gap:12px; align-items:flex-end; }
+.individual-filter-card .field { flex:1; margin:0; }
+.individual-filter-card select { width:100%; }
+.individual-profile h3 { margin:4px 0; font-size:1.25rem; }
+.individual-profile p { margin:0; }
 .mini-card.highlight {
   background: linear-gradient(135deg, var(--primary), var(--accent));
   border: none;

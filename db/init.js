@@ -29,6 +29,29 @@ async function initDb() {
     await pool.query('ALTER TABLE nota ADD COLUMN keterangan TEXT NULL AFTER status');
   }
 
+  async function addColumnIfMissing(table, column, definition) {
+    const [columns] = await pool.query(`SHOW COLUMNS FROM \`${table}\` LIKE ?`, [column]);
+    if (columns.length === 0) await pool.query(`ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${definition}`);
+  }
+
+  for (const [column, definition] of [
+    ['volume_pagi', 'DECIMAL(12,2) DEFAULT 0'], ['volume_sore', 'DECIMAL(12,2) DEFAULT 0'],
+    ['kualitas_f', 'DECIMAL(8,2) NULL'], ['kualitas_s', 'DECIMAL(8,2) NULL'],
+    ['kualitas_p', 'DECIMAL(8,2) NULL'], ['kualitas_ts', 'DECIMAL(8,2) NULL'],
+    ['kualitas_ph', 'DECIMAL(8,2) NULL'], ['kualitas_w', 'DECIMAL(8,2) NULL'],
+    ['potongan', 'DECIMAL(15,2) DEFAULT 0'],
+  ]) await addColumnIfMissing('pembelian', column, definition);
+  await addColumnIfMissing('penjualan', 'volume_pagi', 'DECIMAL(12,2) DEFAULT 0');
+  await addColumnIfMissing('penjualan', 'volume_sore', 'DECIMAL(12,2) DEFAULT 0');
+  await addColumnIfMissing('nota', 'pihak_nama', 'VARCHAR(150) NULL');
+  await addColumnIfMissing('nota', 'pihak_alamat', 'TEXT NULL');
+  await addColumnIfMissing('nota', 'pihak_telepon', 'VARCHAR(30) NULL');
+  await addColumnIfMissing('nota', 'total_manual', 'DECIMAL(15,2) DEFAULT 0');
+  const [refColumns] = await pool.query("SHOW COLUMNS FROM nota LIKE 'referensi_id'");
+  if (refColumns[0] && refColumns[0].Null === 'NO') {
+    await pool.query('ALTER TABLE nota MODIFY referensi_id INT NULL');
+  }
+
   const [[{ n }]] = await pool.query('SELECT COUNT(*) AS n FROM admins');
   if (n === 0) {
     const hash = await bcrypt.hash('admin123', 10);

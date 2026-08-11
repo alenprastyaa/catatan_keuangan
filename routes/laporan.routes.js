@@ -14,5 +14,6 @@ router.get('/pembelian', ctrl.laporanPembelian);
 router.get('/pengeluaran', ctrl.laporanPengeluaran);
 router.get('/hutang-piutang', ctrl.laporanHutangPiutang);
 router.get('/data-supplier-konsumen', ctrl.dataSupplierKonsumen);
+router.get('/individu', ctrl.laporanIndividu);
 
 module.exports = router;

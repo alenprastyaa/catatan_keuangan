@@ -91,6 +91,9 @@ export default {
     fmtGrowth(g) {
       return (g >= 0 ? '+' : '') + g.toFixed(1).replace('.', ',') + '%';
     },
+    go(path, query = {}) {
+      this.$router.push({ path, query });
+    },
     async loadInsight() {
       try {
         this.insight = await api.get('/dashboard/insight');
@@ -231,14 +234,14 @@ export default {
               <div class="dash-balance-value">{{ rupiah(summary.kas_terkini) }}</div>
             </div>
             <div class="dash-hero-stats">
-              <div class="dash-hero-stat">
+              <div class="dash-hero-stat clickable-card" role="link" tabindex="0" @click="go('/penjualan')" @keydown.enter="go('/penjualan')">
                 <div class="dash-hero-stat-icon income">&darr;</div>
                 <div>
                   <div class="stat-label">Penjualan</div>
                   <div class="stat-value">{{ rupiah(summary.total_penjualan) }}<span v-if="growthPenjualan !== null" class="growth-chip" :class="growthPenjualan >= 0 ? 'up' : 'down'">{{ fmtGrowth(growthPenjualan) }}</span></div>
                 </div>
               </div>
-              <div class="dash-hero-stat">
+              <div class="dash-hero-stat clickable-card" role="link" tabindex="0" @click="go('/pembelian')" @keydown.enter="go('/pembelian')">
                 <div class="dash-hero-stat-icon expense">&uarr;</div>
                 <div>
                   <div class="stat-label">Pembelian</div>
@@ -250,22 +253,22 @@ export default {
         </div>
 
         <div class="mini-card-row">
-          <div class="mini-card highlight">
+          <div class="mini-card highlight clickable-card" role="link" tabindex="0" @click="go('/produk')" @keydown.enter="go('/produk')">
             <div class="icon-badge">&#128230;</div>
             <div class="mini-label">Total Produk</div>
             <div class="mini-value">{{ summary.total_produk }}</div>
           </div>
-          <div class="mini-card">
+          <div class="mini-card clickable-card" role="link" tabindex="0" @click="go('/produk')" @keydown.enter="go('/produk')">
             <div class="icon-badge">&#128200;</div>
             <div class="mini-label">Total Stok</div>
             <div class="mini-value">{{ summary.total_stok }}</div>
           </div>
-          <div class="mini-card">
+          <div class="mini-card clickable-card" role="link" tabindex="0" @click="go('/pembelian', { status: 'hutang' })" @keydown.enter="go('/pembelian', { status: 'hutang' })">
             <div class="icon-badge danger">&darr;</div>
             <div class="mini-label">Total Hutang</div>
             <div class="mini-value">{{ rupiah(summary.total_hutang) }}</div>
           </div>
-          <div class="mini-card">
+          <div class="mini-card clickable-card" role="link" tabindex="0" @click="go('/penjualan', { status: 'piutang' })" @keydown.enter="go('/penjualan', { status: 'piutang' })">
             <div class="icon-badge warning">&uarr;</div>
             <div class="mini-label">Total Piutang</div>
             <div class="mini-value">{{ rupiah(summary.total_piutang) }}</div>

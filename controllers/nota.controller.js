@@ -49,6 +49,21 @@ const getNotaById = asyncHandler(async (req, res) => {
   const [[nota]] = await pool.query('SELECT * FROM nota WHERE id = ?', [id]);
   if (!nota) return res.status(404).json({ message: 'Nota tidak ditemukan.' });
 
+  if (!nota.referensi_id) {
+    const [items] = await pool.query('SELECT * FROM nota_items WHERE nota_id = ? ORDER BY id', [id]);
+    return res.json({
+      ...nota,
+      manual: true,
+      transaksi: {
+        pihak_nama: nota.pihak_nama,
+        pihak_alamat: nota.pihak_alamat,
+        pihak_telepon: nota.pihak_telepon,
+        total: nota.total_manual,
+      },
+      items: items.map((it) => ({ ...it, nama_produk: it.nama_item })),
+    });
+  }
+
   if (nota.tipe === 'penjualan') {
     const [[header]] = await pool.query(
       `SELECT p.*, b.nama AS pihak_nama, b.alamat AS pihak_alamat, b.telepon AS pihak_telepon
@@ -75,19 +90,44 @@ const getNotaById = asyncHandler(async (req, res) => {
 });
 
 const createNota = asyncHandler(async (req, res) => {
-  const { no_invoice, tipe, referensi_id, tanggal, jatuh_tempo, status, keterangan } = req.body;
-  if (!no_invoice || !tipe || !referensi_id || !tanggal) {
-    return res.status(400).json({ message: 'No invoice, tipe, referensi, dan tanggal wajib diisi.' });
+  const { no_invoice, tipe, referensi_id, tanggal, jatuh_tempo, status, keterangan,
+    pihak_nama, pihak_alamat, pihak_telepon, items = [] } = req.body;
+  if (!no_invoice || !tipe || !tanggal) {
+    return res.status(400).json({ message: 'No invoice, tipe, dan tanggal wajib diisi.' });
   }
   if (keteranganTerlaluPanjang(keterangan)) {
     return res.status(400).json({ message: 'Keterangan maksimal 1000 karakter.' });
   }
-  const [result] = await pool.query(
-    `INSERT INTO nota (no_invoice, tipe, referensi_id, tanggal, jatuh_tempo, status, keterangan)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [no_invoice, tipe, referensi_id, tanggal, jatuh_tempo || null, status || 'unpaid', normalizeKeterangan(keterangan)]
-  );
-  res.status(201).json({ id: result.insertId });
+  const manual = !referensi_id;
+  const validItems = manual ? items.filter((it) => String(it.nama_item || '').trim()) : [];
+  const totalManual = validItems.reduce((sum, it) => sum + Number(it.qty || 0) * Number(it.harga_satuan || 0), 0);
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [result] = await conn.query(
+      `INSERT INTO nota (no_invoice, tipe, referensi_id, tanggal, jatuh_tempo, status, keterangan,
+       pihak_nama, pihak_alamat, pihak_telepon, total_manual)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [no_invoice, tipe, referensi_id || null, tanggal, jatuh_tempo || null, status || 'unpaid',
+       normalizeKeterangan(keterangan), manual ? String(pihak_nama || '').trim() || null : null,
+       manual ? String(pihak_alamat || '').trim() || null : null, manual ? String(pihak_telepon || '').trim() || null : null, totalManual]
+    );
+    for (const item of validItems) {
+      const qty = Number(item.qty || 0);
+      const harga = Number(item.harga_satuan || 0);
+      await conn.query(
+        `INSERT INTO nota_items (nota_id, nama_item, qty, satuan, harga_satuan, subtotal) VALUES (?, ?, ?, ?, ?, ?)`,
+        [result.insertId, String(item.nama_item).trim(), qty, String(item.satuan || 'pcs').trim(), harga, qty * harga]
+      );
+    }
+    await conn.commit();
+    res.status(201).json({ id: result.insertId });
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
 });
 
 const updateNota = asyncHandler(async (req, res) => {

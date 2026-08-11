@@ -7,6 +7,10 @@ function hitungStatus(total, sudahBayar) {
   return 'sebagian';
 }
 
+function angkaAtauNull(value) {
+  return value === '' || value === null || value === undefined ? null : Number(value);
+}
+
 const getPembelian = asyncHandler(async (req, res) => {
   const { search = '', status = '', start = '', end = '', page = 1, limit = 20 } = req.query;
   const offset = (Number(page) - 1) * Number(limit);
@@ -32,7 +36,8 @@ const getPembelian = asyncHandler(async (req, res) => {
   const [rows] = await pool.query(
     `SELECT p.*, s.nama AS supplier_nama,
        COALESCE((SELECT SUM(jumlah_bayar) FROM pembelian_pembayaran pp WHERE pp.pembelian_id = p.id), 0) AS sudah_bayar,
-       COALESCE((SELECT SUM(qty) FROM pembelian_items pi WHERE pi.pembelian_id = p.id), 0) AS total_qty
+       COALESCE((SELECT SUM(qty) FROM pembelian_items pi WHERE pi.pembelian_id = p.id), 0) AS total_qty,
+       (COALESCE(p.volume_pagi,0) + COALESCE(p.volume_sore,0)) AS volume_liter
      FROM pembelian p
      LEFT JOIN pelanggan_supplier s ON s.id = p.supplier_id
      ${where}
@@ -71,13 +76,16 @@ const getPembelianById = asyncHandler(async (req, res) => {
 });
 
 const createPembelian = asyncHandler(async (req, res) => {
-  const { supplier_id, tanggal, jatuh_tempo, catatan, items = [], bayar_awal = 0, buat_nota = false } = req.body;
+  const { supplier_id, tanggal, jatuh_tempo, catatan, items = [], bayar_awal = 0, buat_nota = false,
+    volume_pagi = 0, volume_sore = 0, kualitas_f = null, kualitas_s = null, kualitas_p = null,
+    kualitas_ts = null, kualitas_ph = null, kualitas_w = null, potongan = 0 } = req.body;
 
   if (!tanggal || items.length === 0) {
     return res.status(400).json({ message: 'Tanggal dan minimal satu item wajib diisi.' });
   }
 
-  const total = items.reduce((sum, it) => sum + Number(it.qty) * Number(it.harga_satuan), 0);
+  const subtotal = items.reduce((sum, it) => sum + Number(it.qty) * Number(it.harga_satuan), 0);
+  const total = Math.max(0, subtotal - Number(potongan || 0));
   const status = hitungStatus(total, Number(bayar_awal));
   const noTransaksi = 'PB-' + Date.now();
 
@@ -86,9 +94,12 @@ const createPembelian = asyncHandler(async (req, res) => {
     await conn.beginTransaction();
 
     const [result] = await conn.query(
-      `INSERT INTO pembelian (no_transaksi, supplier_id, tanggal, total, status, jatuh_tempo, catatan)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [noTransaksi, supplier_id || null, tanggal, total, status, jatuh_tempo || null, catatan || null]
+      `INSERT INTO pembelian (no_transaksi, supplier_id, tanggal, total, status, jatuh_tempo, catatan,
+        volume_pagi, volume_sore, kualitas_f, kualitas_s, kualitas_p, kualitas_ts, kualitas_ph, kualitas_w, potongan)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [noTransaksi, supplier_id || null, tanggal, total, status, jatuh_tempo || null, catatan || null,
+       volume_pagi || 0, volume_sore || 0, angkaAtauNull(kualitas_f), angkaAtauNull(kualitas_s), angkaAtauNull(kualitas_p),
+       angkaAtauNull(kualitas_ts), angkaAtauNull(kualitas_ph), angkaAtauNull(kualitas_w), potongan || 0]
     );
     const pembelianId = result.insertId;
 
@@ -130,7 +141,9 @@ const createPembelian = asyncHandler(async (req, res) => {
 
 const updatePembelian = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { supplier_id, tanggal, jatuh_tempo, catatan, items } = req.body;
+  const { supplier_id, tanggal, jatuh_tempo, catatan, items, volume_pagi = 0, volume_sore = 0,
+    kualitas_f = null, kualitas_s = null, kualitas_p = null, kualitas_ts = null, kualitas_ph = null,
+    kualitas_w = null, potongan = 0 } = req.body;
 
   const conn = await pool.getConnection();
   try {
@@ -144,7 +157,7 @@ const updatePembelian = asyncHandler(async (req, res) => {
       }
       await conn.query('DELETE FROM pembelian_items WHERE pembelian_id = ?', [id]);
 
-      total = items.reduce((sum, it) => sum + Number(it.qty) * Number(it.harga_satuan), 0);
+      total = Math.max(0, items.reduce((sum, it) => sum + Number(it.qty) * Number(it.harga_satuan), 0) - Number(potongan || 0));
       for (const it of items) {
         const subtotal = Number(it.qty) * Number(it.harga_satuan);
         await conn.query(
@@ -166,8 +179,11 @@ const updatePembelian = asyncHandler(async (req, res) => {
     const status = hitungStatus(total, sudah_bayar);
 
     await conn.query(
-      `UPDATE pembelian SET supplier_id=?, tanggal=?, total=?, status=?, jatuh_tempo=?, catatan=? WHERE id=?`,
-      [supplier_id || null, tanggal, total, status, jatuh_tempo || null, catatan || null, id]
+      `UPDATE pembelian SET supplier_id=?, tanggal=?, total=?, status=?, jatuh_tempo=?, catatan=?,
+       volume_pagi=?, volume_sore=?, kualitas_f=?, kualitas_s=?, kualitas_p=?, kualitas_ts=?, kualitas_ph=?, kualitas_w=?, potongan=? WHERE id=?`,
+      [supplier_id || null, tanggal, total, status, jatuh_tempo || null, catatan || null,
+       volume_pagi || 0, volume_sore || 0, angkaAtauNull(kualitas_f), angkaAtauNull(kualitas_s), angkaAtauNull(kualitas_p),
+       angkaAtauNull(kualitas_ts), angkaAtauNull(kualitas_ph), angkaAtauNull(kualitas_w), potongan || 0, id]
     );
 
     await conn.commit();

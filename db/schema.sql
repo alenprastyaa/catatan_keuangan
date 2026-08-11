@@ -85,6 +85,15 @@ CREATE TABLE IF NOT EXISTS pembelian (
   status ENUM('lunas','hutang','sebagian') DEFAULT 'hutang',
   jatuh_tempo DATE,
   catatan TEXT,
+  volume_pagi DECIMAL(12,2) DEFAULT 0,
+  volume_sore DECIMAL(12,2) DEFAULT 0,
+  kualitas_f DECIMAL(8,2) NULL,
+  kualitas_s DECIMAL(8,2) NULL,
+  kualitas_p DECIMAL(8,2) NULL,
+  kualitas_ts DECIMAL(8,2) NULL,
+  kualitas_ph DECIMAL(8,2) NULL,
+  kualitas_w DECIMAL(8,2) NULL,
+  potongan DECIMAL(15,2) DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (supplier_id) REFERENCES pelanggan_supplier(id)
 );
@@ -122,6 +131,8 @@ CREATE TABLE IF NOT EXISTS penjualan (
   status ENUM('lunas','piutang','sebagian') DEFAULT 'piutang',
   jatuh_tempo DATE,
   catatan TEXT,
+  volume_pagi DECIMAL(12,2) DEFAULT 0,
+  volume_sore DECIMAL(12,2) DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (pembeli_id) REFERENCES pembeli(id)
 );
@@ -166,12 +177,27 @@ CREATE TABLE IF NOT EXISTS nota (
   id INT AUTO_INCREMENT PRIMARY KEY,
   no_invoice VARCHAR(50) NOT NULL UNIQUE,
   tipe ENUM('penjualan','pembelian') NOT NULL,
-  referensi_id INT NOT NULL,
+  referensi_id INT NULL,
   tanggal DATE NOT NULL,
   jatuh_tempo DATE,
   status ENUM('paid','unpaid','overdue') DEFAULT 'unpaid',
   keterangan TEXT,
+  pihak_nama VARCHAR(150) NULL,
+  pihak_alamat TEXT NULL,
+  pihak_telepon VARCHAR(30) NULL,
+  total_manual DECIMAL(15,2) DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS nota_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  nota_id INT NOT NULL,
+  nama_item VARCHAR(150) NOT NULL,
+  qty DECIMAL(12,2) DEFAULT 0,
+  satuan VARCHAR(30) DEFAULT 'pcs',
+  harga_satuan DECIMAL(15,2) DEFAULT 0,
+  subtotal DECIMAL(15,2) DEFAULT 0,
+  FOREIGN KEY (nota_id) REFERENCES nota(id) ON DELETE CASCADE
 );
 
 -- =========================

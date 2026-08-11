@@ -4,12 +4,15 @@ import DataTable from '../components/DataTable.js';
 import Pagination from '../components/Pagination.js';
 import Modal from '../components/Modal.js';
 import { downloadInvoicePdf } from '../invoicePdf.js';
+import { printThermalInvoice } from '../thermalPrint.js';
 
 const STATUS_BADGE = { paid: 'badge-success', unpaid: 'badge-warning', overdue: 'badge-danger' };
 
 const emptyForm = () => ({
   no_invoice: 'INV-' + Date.now(), tipe: 'penjualan', referensi_id: '',
-  tanggal: todayStr(), jatuh_tempo: '', status: 'unpaid', keterangan: '',
+  tanggal: todayStr(), jatuh_tempo: '', status: 'unpaid', keterangan: '', manual: false,
+  pihak_nama: '', pihak_alamat: '', pihak_telepon: '',
+  items: [{ nama_item: '', qty: 1, satuan: 'liter', harga_satuan: 0 }],
 });
 
 const dateInput = (value) => value ? String(value).slice(0, 10) : '';
@@ -70,9 +73,9 @@ export default {
     },
     async save() {
       this.error = '';
-      if (!this.form.referensi_id) { this.error = 'Pilih transaksi referensi.'; return; }
+      if (!this.form.manual && !this.form.referensi_id) { this.error = 'Pilih transaksi referensi atau gunakan mode invoice manual.'; return; }
       try {
-        await api.post('/nota', this.form);
+        await api.post('/nota', { ...this.form, referensi_id: this.form.manual ? null : this.form.referensi_id });
         this.showFormModal = false;
         this.load();
       } catch (err) {
@@ -115,11 +118,23 @@ export default {
       if (!this.detail) return;
       await downloadInvoicePdf(this.detail);
     },
+    printThermal() {
+      if (this.detail) printThermalInvoice(this.detail);
+    },
+    addManualItem() {
+      this.form.items.push({ nama_item: '', qty: 1, satuan: 'liter', harga_satuan: 0 });
+    },
+    removeManualItem(index) {
+      this.form.items.splice(index, 1);
+    },
   },
   watch: {
     'form.tipe'() {
       this.form.referensi_id = '';
       this.loadReferensi();
+    },
+    'form.manual'(manual) {
+      if (manual) this.form.referensi_id = '';
     },
   },
   template: `
@@ -144,7 +159,7 @@ export default {
           </div>
         </div>
         <div class="spacer"></div>
-        <button class="btn-primary" @click="openCreate">+ Tambah Invoice</button>
+        <button class="btn-primary" @click="openCreate">+ Buat Invoice</button>
       </div>
 
       <DataTable :columns="columns" :rows="rows" :loading="loading">
@@ -174,12 +189,29 @@ export default {
               </select>
             </div>
             <div class="field">
-              <label>Transaksi</label>
-              <select v-model.number="form.referensi_id" style="width:100%">
+              <label>Transaksi Referensi</label>
+              <select v-model.number="form.referensi_id" :disabled="form.manual" style="width:100%">
                 <option value="">- Pilih -</option>
                 <option v-for="r in referensiList" :key="r.id" :value="r.id">{{ r.no_transaksi }}</option>
               </select>
             </div>
+          </div>
+          <label class="manual-invoice-toggle"><input type="checkbox" v-model="form.manual" /> Buat invoice manual / invoice kosong</label>
+          <div v-if="form.manual" class="manual-invoice-box">
+            <div class="field-row">
+              <div class="field"><label>Nama Pihak</label><input v-model="form.pihak_nama" placeholder="Boleh dikosongkan" style="width:100%" /></div>
+              <div class="field"><label>Telepon</label><input v-model="form.pihak_telepon" style="width:100%" /></div>
+            </div>
+            <div class="field"><label>Alamat</label><input v-model="form.pihak_alamat" style="width:100%" /></div>
+            <label>Item Manual <span class="text-muted">(boleh kosong)</span></label>
+            <div v-for="(it, index) in form.items" :key="index" class="manual-item-row">
+              <input v-model="it.nama_item" placeholder="Nama item" />
+              <input type="number" min="0" step="0.01" v-model.number="it.qty" placeholder="Qty" />
+              <input v-model="it.satuan" placeholder="Satuan" />
+              <input type="number" min="0" v-model.number="it.harga_satuan" placeholder="Harga" />
+              <button type="button" class="btn-danger btn-sm" @click="removeManualItem(index)">&times;</button>
+            </div>
+            <button type="button" class="btn-secondary btn-sm" @click="addManualItem">+ Tambah Item</button>
           </div>
           <div class="field-row">
             <div class="field">
@@ -300,7 +332,8 @@ export default {
           </div>
 
           <div class="no-print" style="text-align:right;margin-top:16px;display:flex;gap:8px;justify-content:flex-end">
-            <button class="btn-primary" @click="downloadPdf">⬇ Download PDF</button>
+            <button class="btn-secondary" @click="printThermal">Cetak Thermal 80mm</button>
+            <button class="btn-primary" @click="downloadPdf">Cetak A4 / PDF</button>
           </div>
         </div>
       </Modal>

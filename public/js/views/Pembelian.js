@@ -8,7 +8,9 @@ const STATUS_BADGE = { lunas: 'badge-success', hutang: 'badge-danger', sebagian:
 
 const emptyForm = () => ({
   id: null, supplier_id: '', tanggal: todayStr(), jatuh_tempo: '', catatan: '',
-  bayar_awal: 0, buat_nota: false, items: [{ produk_id: '', qty: 1, harga_satuan: 0 }],
+  bayar_awal: 0, buat_nota: false, volume_pagi: 0, volume_sore: 0, potongan: 0,
+  kualitas_f: '', kualitas_s: '', kualitas_p: '', kualitas_ts: '', kualitas_ph: '', kualitas_w: '',
+  items: [{ produk_id: '', qty: 1, harga_satuan: 0 }],
 });
 
 const emptySupplierForm = () => ({ nama: '', tipe: 'supplier', telepon: '', alamat: '', email: '' });
@@ -30,6 +32,7 @@ export default {
         { key: 'tanggal', label: 'Tanggal' },
         { key: 'supplier_nama', label: 'Supplier' },
         { key: 'total_qty', label: 'Qty', align: 'right' },
+        { key: 'volume_liter', label: 'Volume', align: 'right' },
         { key: 'total', label: 'Total', align: 'right' },
         { key: 'sudah_bayar', label: 'Terbayar', align: 'right' },
         { key: 'status', label: 'Status' },
@@ -38,10 +41,14 @@ export default {
   },
   computed: {
     formTotal() {
-      return this.form.items.reduce((s, it) => s + this.itemTotal(it), 0);
+      return Math.max(0, this.form.items.reduce((s, it) => s + this.itemTotal(it), 0) - Number(this.form.potongan || 0));
+    },
+    formVolume() {
+      return Number(this.form.volume_pagi || 0) + Number(this.form.volume_sore || 0);
     },
   },
   mounted() {
+    if (this.$route.query.status) this.status = this.$route.query.status;
     this.load();
     this.loadOptions();
   },
@@ -83,7 +90,9 @@ export default {
       const d = await api.get('/pembelian/' + row.id);
       this.form = {
         id: d.id, supplier_id: d.supplier_id || '', tanggal: d.tanggal, jatuh_tempo: d.jatuh_tempo || '',
-        catatan: d.catatan || '', bayar_awal: 0,
+        catatan: d.catatan || '', bayar_awal: 0, volume_pagi: Number(d.volume_pagi || 0), volume_sore: Number(d.volume_sore || 0),
+        potongan: Number(d.potongan || 0), kualitas_f: d.kualitas_f ?? '', kualitas_s: d.kualitas_s ?? '',
+        kualitas_p: d.kualitas_p ?? '', kualitas_ts: d.kualitas_ts ?? '', kualitas_ph: d.kualitas_ph ?? '', kualitas_w: d.kualitas_w ?? '',
         items: d.items.map((it) => ({ produk_id: it.produk_id, qty: it.qty, harga_satuan: it.harga_satuan })),
       };
       this.editDetail = d;
@@ -191,6 +200,7 @@ export default {
       <DataTable :columns="columns" :rows="rows" :loading="loading">
         <template #cell-tanggal="{ row }">{{ tanggalIndo(row.tanggal) }}</template>
         <template #cell-total="{ row }">{{ rupiah(row.total) }}</template>
+        <template #cell-volume_liter="{ row }">{{ Number(row.volume_pagi || 0) + Number(row.volume_sore || 0) }} L</template>
         <template #cell-sudah_bayar="{ row }">{{ rupiah(row.sudah_bayar) }}</template>
         <template #cell-status="{ row }"><span class="badge" :class="statusBadge(row.status)">{{ row.status }}</span></template>
         <template #actions="{ row }">
@@ -232,6 +242,18 @@ export default {
           <div class="field">
             <label>Catatan</label>
             <input v-model="form.catatan" style="width:100%" />
+          </div>
+
+          <div class="milk-data-card">
+            <div class="milk-data-title"><strong>Data Volume & Kualitas Susu</strong><span>Total {{ formVolume }} liter</span></div>
+            <div class="field-row">
+              <div class="field"><label>Volume Pagi (L)</label><input type="number" min="0" step="0.01" v-model.number="form.volume_pagi" style="width:100%" /></div>
+              <div class="field"><label>Volume Sore (L)</label><input type="number" min="0" step="0.01" v-model.number="form.volume_sore" style="width:100%" /></div>
+              <div class="field"><label>Potongan (Rp)</label><input type="number" min="0" v-model.number="form.potongan" style="width:100%" /></div>
+            </div>
+            <div class="quality-grid">
+              <div v-for="key in ['f','s','p','ts','ph','w']" :key="key" class="field"><label>{{ key.toUpperCase() }}</label><input type="number" step="0.01" v-model.number="form['kualitas_' + key]" /></div>
+            </div>
           </div>
 
           <div v-if="form.id && editDetail" class="field" style="background:var(--bg-soft,#f6f6f8);border-radius:8px;padding:10px 12px;margin-bottom:14px">
@@ -286,7 +308,7 @@ export default {
             </label>
           </div>
 
-          <p style="text-align:right;font-weight:600;margin-top:12px">Total: {{ rupiah(formTotal) }}</p>
+          <p style="text-align:right;font-weight:600;margin-top:12px">Volume: {{ formVolume }} L &nbsp;|&nbsp; Total setelah potongan: {{ rupiah(formTotal) }}</p>
           <p v-if="error" class="error-text">{{ error }}</p>
         </form>
         <template #footer>
@@ -323,6 +345,10 @@ export default {
         <div v-if="detail">
           <p><strong>{{ detail.no_transaksi }}</strong> &mdash; {{ detail.supplier_nama || '-' }} &mdash; {{ tanggalIndo(detail.tanggal) }}
             <span class="badge" :class="statusBadge(detail.status)">{{ detail.status }}</span></p>
+          <div class="transaction-metrics">
+            <span><b>Volume:</b> {{ Number(detail.volume_pagi || 0) + Number(detail.volume_sore || 0) }} L (Pagi {{ detail.volume_pagi || 0 }} / Sore {{ detail.volume_sore || 0 }})</span>
+            <span><b>Kualitas:</b> F {{ detail.kualitas_f ?? '-' }} · S {{ detail.kualitas_s ?? '-' }} · P {{ detail.kualitas_p ?? '-' }} · TS {{ detail.kualitas_ts ?? '-' }} · PH {{ detail.kualitas_ph ?? '-' }} · W {{ detail.kualitas_w ?? '-' }}</span>
+          </div>
 
           <div class="table-wrap" style="margin-bottom:14px">
             <table>

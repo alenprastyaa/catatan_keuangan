@@ -8,7 +8,7 @@ const STATUS_BADGE = { lunas: 'badge-success', hutang: 'badge-danger', sebagian:
 
 const emptyForm = () => ({
   id: null, supplier_id: '', tanggal: todayStr(), jatuh_tempo: '', catatan: '',
-  bayar_awal: 0, buat_nota: false, volume_pagi: 0, volume_sore: 0, potongan: 0,
+  bayar_awal: 0, buat_nota: false, input_type: 'qty', waktu_volume: 'pagi', volume_pagi: 0, volume_sore: 0, potongan: 0,
   kualitas_f: '', kualitas_s: '', kualitas_p: '', kualitas_ts: '', kualitas_ph: '', kualitas_w: '',
   items: [{ produk_id: '', qty: 1, harga_satuan: 0 }],
 });
@@ -44,7 +44,8 @@ export default {
       return Math.max(0, this.form.items.reduce((s, it) => s + this.itemTotal(it), 0) - Number(this.form.potongan || 0));
     },
     formVolume() {
-      return Number(this.form.volume_pagi || 0) + Number(this.form.volume_sore || 0);
+      if (this.form.input_type !== 'volume') return 0;
+      return this.form.items.reduce((sum, it) => sum + Number(it.qty || 0), 0);
     },
   },
   mounted() {
@@ -90,7 +91,10 @@ export default {
       const d = await api.get('/pembelian/' + row.id);
       this.form = {
         id: d.id, supplier_id: d.supplier_id || '', tanggal: d.tanggal, jatuh_tempo: d.jatuh_tempo || '',
-        catatan: d.catatan || '', bayar_awal: 0, volume_pagi: Number(d.volume_pagi || 0), volume_sore: Number(d.volume_sore || 0),
+        catatan: d.catatan || '', bayar_awal: 0,
+        input_type: Number(d.volume_pagi || 0) + Number(d.volume_sore || 0) > 0 ? 'volume' : 'qty',
+        waktu_volume: Number(d.volume_sore || 0) > 0 ? 'sore' : 'pagi',
+        volume_pagi: Number(d.volume_pagi || 0), volume_sore: Number(d.volume_sore || 0),
         potongan: Number(d.potongan || 0), kualitas_f: d.kualitas_f ?? '', kualitas_s: d.kualitas_s ?? '',
         kualitas_p: d.kualitas_p ?? '', kualitas_ts: d.kualitas_ts ?? '', kualitas_ph: d.kualitas_ph ?? '', kualitas_w: d.kualitas_w ?? '',
         items: d.items.map((it) => ({ produk_id: it.produk_id, qty: it.qty, harga_satuan: it.harga_satuan })),
@@ -148,10 +152,16 @@ export default {
       const items = this.form.items.filter((it) => it.produk_id && it.qty > 0);
       if (items.length === 0) { this.error = 'Minimal satu item produk wajib diisi.'; return; }
       try {
+        const volume = this.form.input_type === 'volume' ? items.reduce((sum, it) => sum + Number(it.qty || 0), 0) : 0;
+        const payload = {
+          ...this.form, items,
+          volume_pagi: this.form.input_type === 'volume' && this.form.waktu_volume === 'pagi' ? volume : 0,
+          volume_sore: this.form.input_type === 'volume' && this.form.waktu_volume === 'sore' ? volume : 0,
+        };
         if (this.form.id) {
-          await api.put('/pembelian/' + this.form.id, { ...this.form, items });
+          await api.put('/pembelian/' + this.form.id, payload);
         } else {
-          await api.post('/pembelian', { ...this.form, items });
+          await api.post('/pembelian', payload);
         }
         this.showFormModal = false;
         this.load();
@@ -245,12 +255,8 @@ export default {
           </div>
 
           <div class="milk-data-card">
-            <div class="milk-data-title"><strong>Data Volume & Kualitas Susu</strong><span>Total {{ formVolume }} liter</span></div>
-            <div class="field-row">
-              <div class="field"><label>Volume Pagi (L)</label><input type="number" min="0" step="0.01" v-model.number="form.volume_pagi" style="width:100%" /></div>
-              <div class="field"><label>Volume Sore (L)</label><input type="number" min="0" step="0.01" v-model.number="form.volume_sore" style="width:100%" /></div>
-              <div class="field"><label>Potongan (Rp)</label><input type="number" min="0" v-model.number="form.potongan" style="width:100%" /></div>
-            </div>
+            <div class="milk-data-title"><strong>Data Kualitas Susu</strong></div>
+            <div class="field"><label>Potongan (Rp)</label><input type="number" min="0" v-model.number="form.potongan" style="width:100%" /></div>
             <div class="quality-grid">
               <div v-for="key in ['f','s','p','ts','ph','w']" :key="key" class="field"><label>{{ key.toUpperCase() }}</label><input type="number" step="0.01" v-model.number="form['kualitas_' + key]" /></div>
             </div>
@@ -279,9 +285,14 @@ export default {
 
           <div class="field">
             <label>Item Produk</label>
+            <div class="transaction-input-switch">
+              <label :class="{ active: form.input_type === 'qty' }"><input type="radio" value="qty" v-model="form.input_type" /> Qty</label>
+              <label :class="{ active: form.input_type === 'volume' }"><input type="radio" value="volume" v-model="form.input_type" /> Volume (Liter)</label>
+              <select v-if="form.input_type === 'volume'" v-model="form.waktu_volume"><option value="pagi">Pagi</option><option value="sore">Sore</option></select>
+            </div>
             <div class="table-wrap product-items-wrap" style="margin-bottom:8px">
               <table class="product-items-table">
-                <thead><tr><th>Produk</th><th style="width:120px">Qty</th><th style="width:160px">Harga</th><th style="width:140px" class="text-right">Subtotal</th><th></th></tr></thead>
+                <thead><tr><th>Produk</th><th style="width:120px">{{ form.input_type === 'volume' ? 'Volume (L)' : 'Qty' }}</th><th style="width:160px">Harga</th><th style="width:140px" class="text-right">Subtotal</th><th></th></tr></thead>
                 <tbody>
                   <tr v-for="(it, idx) in form.items" :key="idx">
                     <td data-label="Produk">
@@ -290,7 +301,7 @@ export default {
                         <option v-for="p in produkList" :key="p.id" :value="p.id">{{ p.nama_produk }}</option>
                       </select>
                     </td>
-                    <td data-label="Qty"><input type="number" min="1" v-model.number="it.qty" style="width:100%;padding:10px 8px" /></td>
+                    <td :data-label="form.input_type === 'volume' ? 'Volume (L)' : 'Qty'"><input type="number" min="0.01" :step="form.input_type === 'volume' ? '0.01' : '1'" v-model.number="it.qty" style="width:100%;padding:10px 8px" /></td>
                     <td data-label="Harga"><input type="number" min="0" v-model.number="it.harga_satuan" style="width:100%;padding:10px 8px" /></td>
                     <td data-label="Subtotal" class="text-right product-item-subtotal">{{ rupiah(itemTotal(it)) }}</td>
                     <td class="product-item-action"><button type="button" class="btn-danger btn-sm" @click="removeItemRow(idx)">&times;</button></td>
@@ -304,7 +315,7 @@ export default {
           <div v-if="!form.id" class="field" style="margin-top:10px">
             <label style="display:inline-flex;align-items:center;gap:8px;font-size:0.86rem;color:var(--text);cursor:pointer">
               <input type="checkbox" v-model="form.buat_nota" style="box-shadow:none" />
-              Buat nota/invoice otomatis untuk transaksi ini
+              Buat nota pembayaran otomatis untuk transaksi ini
             </label>
           </div>
 

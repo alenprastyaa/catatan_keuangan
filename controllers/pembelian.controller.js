@@ -96,7 +96,7 @@ const createPembelian = asyncHandler(async (req, res) => {
     const [result] = await conn.query(
       `INSERT INTO pembelian (no_transaksi, supplier_id, tanggal, total, status, jatuh_tempo, catatan,
         volume_pagi, volume_sore, kualitas_f, kualitas_s, kualitas_p, kualitas_ts, kualitas_ph, kualitas_w, potongan)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [noTransaksi, supplier_id || null, tanggal, total, status, jatuh_tempo || null, catatan || null,
        volume_pagi || 0, volume_sore || 0, angkaAtauNull(kualitas_f), angkaAtauNull(kualitas_s), angkaAtauNull(kualitas_p),
        angkaAtauNull(kualitas_ts), angkaAtauNull(kualitas_ph), angkaAtauNull(kualitas_w), potongan || 0]
@@ -125,7 +125,7 @@ const createPembelian = asyncHandler(async (req, res) => {
       await conn.query(
         `INSERT INTO nota (no_invoice, tipe, referensi_id, tanggal, jatuh_tempo, status, keterangan)
          VALUES (?, 'pembelian', ?, ?, ?, ?, ?)`,
-        ['INV-' + Date.now(), pembelianId, tanggal, jatuh_tempo || null, status === 'lunas' ? 'paid' : 'unpaid', catatan?.trim() || null]
+        ['NOTA-' + Date.now(), pembelianId, tanggal, jatuh_tempo || null, status === 'lunas' ? 'paid' : 'unpaid', catatan?.trim() || null]
       );
     }
 

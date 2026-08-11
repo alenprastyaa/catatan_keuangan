@@ -8,7 +8,7 @@ const STATUS_BADGE = { lunas: 'badge-success', piutang: 'badge-danger', sebagian
 
 const emptyForm = () => ({
   id: null, pembeli_id: '', tanggal: todayStr(), jatuh_tempo: '', catatan: '',
-  bayar_awal: 0, buat_nota: false, volume_pagi: 0, volume_sore: 0,
+  bayar_awal: 0, buat_nota: false, input_type: 'qty', waktu_volume: 'pagi', volume_pagi: 0, volume_sore: 0,
   items: [{ produk_id: '', qty: 1, harga_satuan: 0 }],
 });
 
@@ -43,7 +43,8 @@ export default {
       return this.form.items.reduce((s, it) => s + this.itemTotal(it), 0);
     },
     formVolume() {
-      return Number(this.form.volume_pagi || 0) + Number(this.form.volume_sore || 0);
+      if (this.form.input_type !== 'volume') return 0;
+      return this.form.items.reduce((sum, it) => sum + Number(it.qty || 0), 0);
     },
   },
   mounted() {
@@ -89,7 +90,10 @@ export default {
       const d = await api.get('/penjualan/' + row.id);
       this.form = {
         id: d.id, pembeli_id: d.pembeli_id || '', tanggal: d.tanggal, jatuh_tempo: d.jatuh_tempo || '',
-        catatan: d.catatan || '', bayar_awal: 0, volume_pagi: Number(d.volume_pagi || 0), volume_sore: Number(d.volume_sore || 0),
+        catatan: d.catatan || '', bayar_awal: 0,
+        input_type: Number(d.volume_pagi || 0) + Number(d.volume_sore || 0) > 0 ? 'volume' : 'qty',
+        waktu_volume: Number(d.volume_sore || 0) > 0 ? 'sore' : 'pagi',
+        volume_pagi: Number(d.volume_pagi || 0), volume_sore: Number(d.volume_sore || 0),
         items: d.items.map((it) => ({ produk_id: it.produk_id, qty: it.qty, harga_satuan: it.harga_satuan })),
       };
       this.editDetail = d;
@@ -154,10 +158,16 @@ export default {
         }
       }
       try {
+        const volume = this.form.input_type === 'volume' ? items.reduce((sum, it) => sum + Number(it.qty || 0), 0) : 0;
+        const payload = {
+          ...this.form, items,
+          volume_pagi: this.form.input_type === 'volume' && this.form.waktu_volume === 'pagi' ? volume : 0,
+          volume_sore: this.form.input_type === 'volume' && this.form.waktu_volume === 'sore' ? volume : 0,
+        };
         if (this.form.id) {
-          await api.put('/penjualan/' + this.form.id, { ...this.form, items });
+          await api.put('/penjualan/' + this.form.id, payload);
         } else {
-          await api.post('/penjualan', { ...this.form, items });
+          await api.post('/penjualan', payload);
         }
         this.showFormModal = false;
         this.load();
@@ -251,14 +261,6 @@ export default {
             <input v-model="form.catatan" style="width:100%" />
           </div>
 
-          <div class="milk-data-card">
-            <div class="milk-data-title"><strong>Data Volume Transaksi</strong><span>Total {{ formVolume }} liter</span></div>
-            <div class="field-row">
-              <div class="field"><label>Volume Pagi (L)</label><input type="number" min="0" step="0.01" v-model.number="form.volume_pagi" style="width:100%" /></div>
-              <div class="field"><label>Volume Sore (L)</label><input type="number" min="0" step="0.01" v-model.number="form.volume_sore" style="width:100%" /></div>
-            </div>
-          </div>
-
           <div v-if="form.id && editDetail" class="field" style="background:var(--bg-soft,#f6f6f8);border-radius:8px;padding:10px 12px;margin-bottom:14px">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
               <strong>Status Pembayaran</strong>
@@ -282,9 +284,14 @@ export default {
 
           <div class="field">
             <label>Item Produk</label>
+            <div class="transaction-input-switch">
+              <label :class="{ active: form.input_type === 'qty' }"><input type="radio" value="qty" v-model="form.input_type" /> Qty</label>
+              <label :class="{ active: form.input_type === 'volume' }"><input type="radio" value="volume" v-model="form.input_type" /> Volume (Liter)</label>
+              <select v-if="form.input_type === 'volume'" v-model="form.waktu_volume"><option value="pagi">Pagi</option><option value="sore">Sore</option></select>
+            </div>
             <div class="table-wrap product-items-wrap" style="margin-bottom:8px">
               <table class="product-items-table">
-                <thead><tr><th>Produk</th><th style="width:120px">Qty</th><th style="width:160px">Harga</th><th style="width:140px" class="text-right">Subtotal</th><th></th></tr></thead>
+                <thead><tr><th>Produk</th><th style="width:120px">{{ form.input_type === 'volume' ? 'Volume (L)' : 'Qty' }}</th><th style="width:160px">Harga</th><th style="width:140px" class="text-right">Subtotal</th><th></th></tr></thead>
                 <tbody>
                   <tr v-for="(it, idx) in form.items" :key="idx">
                     <td data-label="Produk">
@@ -293,7 +300,7 @@ export default {
                         <option v-for="p in produkList" :key="p.id" :value="p.id" :disabled="!form.id && Number(p.stok) <= 0">{{ p.nama_produk }} (stok: {{ p.stok }})</option>
                       </select>
                     </td>
-                    <td data-label="Qty"><input type="number" min="1" v-model.number="it.qty" style="width:100%;padding:10px 8px" /></td>
+                    <td :data-label="form.input_type === 'volume' ? 'Volume (L)' : 'Qty'"><input type="number" min="0.01" :step="form.input_type === 'volume' ? '0.01' : '1'" v-model.number="it.qty" style="width:100%;padding:10px 8px" /></td>
                     <td data-label="Harga"><input type="number" min="0" v-model.number="it.harga_satuan" style="width:100%;padding:10px 8px" /></td>
                     <td data-label="Subtotal" class="text-right product-item-subtotal">{{ rupiah(itemTotal(it)) }}</td>
                     <td class="product-item-action"><button type="button" class="btn-danger btn-sm" @click="removeItemRow(idx)">&times;</button></td>
@@ -307,7 +314,7 @@ export default {
           <div v-if="!form.id" class="field" style="margin-top:10px">
             <label style="display:inline-flex;align-items:center;gap:8px;font-size:0.86rem;color:var(--text);cursor:pointer">
               <input type="checkbox" v-model="form.buat_nota" style="box-shadow:none" />
-              Buat nota/invoice otomatis untuk transaksi ini
+              Buat invoice otomatis untuk transaksi ini
             </label>
           </div>
 

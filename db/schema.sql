@@ -68,8 +68,8 @@ CREATE TABLE IF NOT EXISTS produk (
   satuan VARCHAR(30) DEFAULT 'pcs',
   harga_beli DECIMAL(15,2) DEFAULT 0,
   harga_jual DECIMAL(15,2) DEFAULT 0,
-  stok INT DEFAULT 0,
-  stok_minimum INT DEFAULT 0,
+  stok DECIMAL(12,2) DEFAULT 0,
+  stok_minimum DECIMAL(12,2) DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -102,7 +102,7 @@ CREATE TABLE IF NOT EXISTS pembelian_items (
   id INT AUTO_INCREMENT PRIMARY KEY,
   pembelian_id INT NOT NULL,
   produk_id INT NOT NULL,
-  qty INT NOT NULL,
+  qty DECIMAL(12,2) NOT NULL,
   harga_satuan DECIMAL(15,2) NOT NULL,
   subtotal DECIMAL(15,2) NOT NULL,
   FOREIGN KEY (pembelian_id) REFERENCES pembelian(id) ON DELETE CASCADE,
@@ -141,7 +141,7 @@ CREATE TABLE IF NOT EXISTS penjualan_items (
   id INT AUTO_INCREMENT PRIMARY KEY,
   penjualan_id INT NOT NULL,
   produk_id INT NOT NULL,
-  qty INT NOT NULL,
+  qty DECIMAL(12,2) NOT NULL,
   harga_satuan DECIMAL(15,2) NOT NULL,
   subtotal DECIMAL(15,2) NOT NULL,
   FOREIGN KEY (penjualan_id) REFERENCES penjualan(id) ON DELETE CASCADE,

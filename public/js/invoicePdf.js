@@ -21,7 +21,7 @@ function tanggalShort(v) {
   return `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}`;
 }
 
-function drawHeader(doc, logoDataUrl) {
+function drawHeader(doc, logoDataUrl, documentTitle = 'INVOICE') {
   const pageW = doc.internal.pageSize.getWidth();
   const H = 38;
   const wBottom = 100;
@@ -32,9 +32,9 @@ function drawHeader(doc, logoDataUrl) {
   doc.triangle(wBottom, 0, wTop, 0, wBottom, H, 'F');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(28);
+  doc.setFontSize(documentTitle.length > 12 ? 21 : 28);
   doc.setTextColor(255, 255, 255);
-  doc.text('INVOICE', 14, 25);
+  doc.text(documentTitle, 14, 25);
 
   if (logoDataUrl) {
     const logoW = 58;
@@ -241,7 +241,8 @@ export async function downloadInvoicePdf(detail) {
 
   const logoDataUrl = await getLogoDataUrl().catch(() => null);
 
-  const headerH = drawHeader(doc, logoDataUrl);
+  const documentTitle = detail.tipe === 'pembelian' ? 'NOTA PEMBAYARAN' : 'INVOICE';
+  const headerH = drawHeader(doc, logoDataUrl, documentTitle);
   let y = drawMetaRow(doc, { noInvoice: detail.no_invoice, tanggal: tanggalShort(detail.tanggal) }, headerH);
   y = drawInfoBlock(doc, {
     noInvoice: detail.no_invoice,

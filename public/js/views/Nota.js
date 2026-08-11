@@ -3,8 +3,8 @@ import { rupiah, todayStr, tanggalIndo } from '../format.js';
 import DataTable from '../components/DataTable.js';
 import Pagination from '../components/Pagination.js';
 import Modal from '../components/Modal.js';
-import { downloadInvoicePdf } from '../invoicePdf.js';
-import { printThermalInvoice } from '../thermalPrint.js?v=20260811-2';
+import { downloadInvoicePdf } from '../invoicePdf.js?v=20260811-4';
+import { printThermalInvoice } from '../thermalPrint.js?v=20260811-4';
 
 const STATUS_BADGE = { paid: 'badge-success', unpaid: 'badge-warning', overdue: 'badge-danger' };
 
@@ -130,6 +130,7 @@ export default {
   },
   watch: {
     'form.tipe'() {
+      this.form.no_invoice = (this.form.tipe === 'pembelian' ? 'NOTA-' : 'INV-') + Date.now();
       this.form.referensi_id = '';
       this.loadReferensi();
     },
@@ -159,12 +160,13 @@ export default {
           </div>
         </div>
         <div class="spacer"></div>
-        <button class="btn-primary" @click="openCreate">+ Buat Invoice</button>
+        <button class="btn-primary" @click="openCreate">+ Buat Nota / Invoice</button>
       </div>
 
       <DataTable :columns="columns" :rows="rows" :loading="loading">
         <template #cell-tanggal="{ row }">{{ tanggalIndo(row.tanggal) }}</template>
         <template #cell-jatuh_tempo="{ row }">{{ row.jatuh_tempo ? tanggalIndo(row.jatuh_tempo) : '-' }}</template>
+        <template #cell-tipe="{ row }">{{ row.tipe === 'pembelian' ? 'Nota Pembayaran' : 'Invoice Penjualan' }}</template>
         <template #cell-status="{ row }"><span class="badge" :class="statusBadge(row.status)">{{ row.status }}</span></template>
         <template #actions="{ row }">
           <button class="btn-secondary btn-sm" @click="openDetail(row)">Lihat</button>
@@ -174,7 +176,7 @@ export default {
       </DataTable>
       <Pagination :total="total" :page="page" :limit="limit" @update:page="changePage" />
 
-      <Modal :show="showFormModal" title="Tambah Invoice" @close="showFormModal = false">
+      <Modal :show="showFormModal" title="Buat Nota / Invoice" @close="showFormModal = false">
         <form @submit.prevent="save">
           <div class="field">
             <label>No. Invoice</label>
@@ -184,8 +186,8 @@ export default {
             <div class="field">
               <label>Tipe</label>
               <select v-model="form.tipe" style="width:100%">
-                <option value="penjualan">Penjualan</option>
-                <option value="pembelian">Pembelian</option>
+                <option value="penjualan">Invoice Penjualan</option>
+                <option value="pembelian">Nota Pembayaran Pembelian</option>
               </select>
             </div>
             <div class="field">
@@ -267,7 +269,7 @@ export default {
         <div v-if="detail" class="print-area invoice-doc">
           <div class="invoice-header">
             <div class="invoice-header-diagonal">
-              <span class="invoice-header-title">INVOICE</span>
+              <span class="invoice-header-title">{{ detail.tipe === 'pembelian' ? 'NOTA PEMBAYARAN' : 'INVOICE' }}</span>
             </div>
             <img class="invoice-header-logo" src="/img/logo.png" alt="Mitrayasa" />
           </div>

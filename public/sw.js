@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mitrayasa-app-v1';
+const CACHE_NAME = 'mitrayasa-app-v2-20260811';
 const APP_SHELL = ['/', '/index.html', '/css/style.css', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
@@ -26,7 +26,7 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/api/')) return; // data harus selalu terbaru, jangan di-cache
 
   event.respondWith(
-    fetch(request)
+    fetch(request, { cache: 'no-store' })
       .then((response) => {
         const copy = response.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));

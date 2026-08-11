@@ -8,7 +8,7 @@ import Pembelian from './views/Pembelian.js';
 import Penjualan from './views/Penjualan.js';
 import ManajemenUser from './views/ManajemenUser.js';
 import PengeluaranKas from './views/PengeluaranKas.js';
-import Nota from './views/Nota.js';
+import Nota from './views/Nota.js?v=20260811-2';
 import Laporan from './views/Laporan.js';
 
 const routes = [

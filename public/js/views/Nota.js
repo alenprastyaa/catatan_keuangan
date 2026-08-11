@@ -4,7 +4,7 @@ import DataTable from '../components/DataTable.js';
 import Pagination from '../components/Pagination.js';
 import Modal from '../components/Modal.js';
 import { downloadInvoicePdf } from '../invoicePdf.js';
-import { printThermalInvoice } from '../thermalPrint.js';
+import { printThermalInvoice } from '../thermalPrint.js?v=20260811-2';
 
 const STATUS_BADGE = { paid: 'badge-success', unpaid: 'badge-warning', overdue: 'badge-danger' };
 

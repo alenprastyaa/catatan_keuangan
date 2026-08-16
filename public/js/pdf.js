@@ -42,7 +42,7 @@ function drawHeader(doc, { title, subtitle, meta }, logoDataUrl) {
   doc.triangle(wBottom, 0, wTop, 0, wBottom, H, 'F');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(15.5);
+  doc.setFontSize(String(title).length > 28 ? 11.5 : 15.5);
   doc.setTextColor(255, 255, 255);
   doc.text(String(title).toUpperCase(), 14, 17, { maxWidth: wBottom - 20 });
 

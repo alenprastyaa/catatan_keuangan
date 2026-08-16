@@ -1,8 +1,9 @@
 import { api } from '../api.js';
 import { rupiah, tanggalIndo, todayStr } from '../format.js';
 import PeriodFilter from '../components/PeriodFilter.js';
-import { downloadReportPdf } from '../pdf.js';
+import { downloadReportPdf } from '../pdf.js?v=20260816-1';
 import { downloadCsv } from '../csv.js';
+import { printThermalMilkReport } from '../thermalPrint.js?v=20260816-2';
 
 const TABS = [
   ['pelanggan-supplier', 'Pelanggan/Supplier'],
@@ -115,11 +116,22 @@ export default {
           ...r.supplier.map((x) => ['Supplier/Pelanggan', x.nama, x.tipe, x.telepon, x.alamat]),
           ...r.konsumen.map((x) => ['Konsumen', x.nama, '', x.telepon, x.alamat])];
       } else if (this.activeTab === 'individu') {
-        rows = [['No. Transaksi', 'Tanggal', 'Volume (L)', 'Status', 'Total', 'Terbayar', 'Sisa'],
-          ...r.transaksi.map((x) => [x.no_transaksi, x.tanggal, x.volume_liter, x.status, x.total, x.sudah_bayar, Number(x.total) - Number(x.sudah_bayar)])];
+        if (this.individuTipe === 'supplier') {
+          rows = [['Tanggal', 'Qty', 'Harga', 'Subtotal'],
+            ...r.transaksi.map((x) => [x.tanggal, x.qty, x.harga_satuan, x.total]),
+            [], ['Riwayat Pembayaran'], ['Tanggal', 'Jumlah', 'Keterangan'],
+            ...(r.pembayaran || []).map((x) => [x.tanggal_bayar, x.jumlah_bayar, x.keterangan || '-'])];
+        } else {
+          rows = [['No. Transaksi', 'Tanggal', 'Volume (L)', 'Status', 'Total', 'Terbayar', 'Sisa'],
+            ...r.transaksi.map((x) => [x.no_transaksi, x.tanggal, x.volume_liter, x.status, x.total, x.sudah_bayar, Number(x.total) - Number(x.sudah_bayar)])];
+        }
       }
 
       downloadCsv(fileName, rows);
+    },
+    printThermalMilk() {
+      if (!this.result?.individu || this.individuTipe !== 'supplier') return;
+      printThermalMilkReport(this.result);
     },
     downloadPdf() {
       if (!this.result) return;
@@ -277,19 +289,49 @@ export default {
           ],
         });
       } else if (this.activeTab === 'individu' && this.result.individu) {
-        downloadReportPdf({
-          ...common, title: `Laporan Individu - ${this.result.individu.nama}`,
-          stats: [
-            { label: 'Volume', value: `${this.result.ringkasan.total_volume} L` },
-            { label: 'Total Nilai', value: rupiah(this.result.ringkasan.total_nilai) },
-            { label: 'Sisa', value: rupiah(this.result.ringkasan.sisa), accent: [207, 52, 52] },
-          ],
-          sections: [{
-            columns: ['No. Transaksi', 'Tanggal', 'Volume', 'Status', 'Total', 'Terbayar', 'Sisa'],
-            rows: this.result.transaksi.map((r) => [r.no_transaksi, tanggalIndo(r.tanggal), `${r.volume_liter} L`, r.status, rupiah(r.total), rupiah(r.sudah_bayar), rupiah(Number(r.total)-Number(r.sudah_bayar))]),
-            columnStyles: { 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' } },
-          }],
-        });
+        if (this.individuTipe === 'supplier') {
+          downloadReportPdf({
+            ...common,
+            title: 'Data Penerimaan / Pembayaran Susu',
+            subtitle: `${this.result.individu.nama} · ${common.subtitle || ''}`,
+            stats: [
+              { label: 'Volume', value: `${this.result.ringkasan.total_volume} L` },
+              { label: 'Total Penerimaan', value: rupiah(this.result.ringkasan.total_nilai) },
+              { label: 'Total Dibayar', value: rupiah(this.result.ringkasan.total_bayar), accent: [11, 138, 97] },
+              { label: 'Sisa', value: rupiah(this.result.ringkasan.sisa), accent: [207, 52, 52] },
+            ],
+            sections: [
+              {
+                heading: 'Data Penerimaan Susu',
+                columns: ['Tanggal', 'Qty', 'Harga', 'Subtotal'],
+                rows: this.result.transaksi.map((r) => [tanggalIndo(r.tanggal), `${r.qty} L`, rupiah(r.harga_satuan), rupiah(r.total)]),
+                foot: ['', '', 'Total', rupiah(this.result.ringkasan.total_nilai)],
+                columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' } },
+              },
+              {
+                heading: 'Riwayat Pembayaran',
+                columns: ['Tanggal', 'Jumlah', 'Keterangan'],
+                rows: (this.result.pembayaran || []).map((p) => [tanggalIndo(p.tanggal_bayar), rupiah(p.jumlah_bayar), p.keterangan || '-']),
+                foot: ['', 'Total Dibayar', rupiah(this.result.ringkasan.total_bayar)],
+                columnStyles: { 1: { halign: 'right' } },
+              },
+            ],
+          });
+        } else {
+          downloadReportPdf({
+            ...common, title: `Laporan Individu - ${this.result.individu.nama}`,
+            stats: [
+              { label: 'Volume', value: `${this.result.ringkasan.total_volume} L` },
+              { label: 'Total Nilai', value: rupiah(this.result.ringkasan.total_nilai) },
+              { label: 'Sisa', value: rupiah(this.result.ringkasan.sisa), accent: [207, 52, 52] },
+            ],
+            sections: [{
+              columns: ['No. Transaksi', 'Tanggal', 'Volume', 'Status', 'Total', 'Terbayar', 'Sisa'],
+              rows: this.result.transaksi.map((r) => [r.no_transaksi, tanggalIndo(r.tanggal), `${r.volume_liter} L`, r.status, rupiah(r.total), rupiah(r.sudah_bayar), rupiah(Number(r.total)-Number(r.sudah_bayar))]),
+              columnStyles: { 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' } },
+            }],
+          });
+        }
       } else if (this.activeTab === 'data-supplier-konsumen') {
         downloadReportPdf({
           ...common,
@@ -321,6 +363,7 @@ export default {
         <div class="spacer"></div>
         <div class="report-actions">
           <button class="btn-secondary" :disabled="!result || loading" @click="exportExcel">⬇ Excel</button>
+          <button v-if="activeTab === 'individu' && individuTipe === 'supplier' && result && result.individu" class="btn-secondary" :disabled="loading" @click="printThermalMilk">🖨 Thermal 80mm</button>
           <button class="btn-primary" :disabled="!result || loading" @click="downloadPdf">⬇ PDF</button>
         </div>
       </div>
@@ -509,9 +552,21 @@ export default {
             <div class="card summary-card"><div class="label">Terbayar</div><div class="value">{{ rupiah(result.ringkasan.total_bayar) }}</div></div>
             <div class="card summary-card"><div class="label">Sisa</div><div class="value">{{ rupiah(result.ringkasan.sisa) }}</div></div>
           </div>
-          <div class="table-wrap"><table><thead><tr><th>No. Transaksi</th><th>Tanggal</th><th class="text-right">Volume</th><th>Status</th><th class="text-right">Total</th><th class="text-right">Terbayar</th><th class="text-right">Sisa</th></tr></thead><tbody>
-            <tr v-if="!result.transaksi.length"><td colspan="7" class="empty-state">Belum ada transaksi pada periode ini.</td></tr>
-            <tr v-for="r in result.transaksi" :key="r.id"><td>{{ r.no_transaksi }}</td><td>{{ tanggalIndo(r.tanggal) }}</td><td class="text-right">{{ r.volume_liter }} L</td><td>{{ r.status }}</td><td class="text-right">{{ rupiah(r.total) }}</td><td class="text-right">{{ rupiah(r.sudah_bayar) }}</td><td class="text-right">{{ rupiah(Number(r.total)-Number(r.sudah_bayar)) }}</td></tr>
+          <template v-if="individuTipe === 'supplier'">
+            <p style="font-weight:600">Data Penerimaan Susu</p>
+            <div class="table-wrap"><table><thead><tr><th>Tanggal</th><th class="text-right">Qty</th><th class="text-right">Harga</th><th class="text-right">Subtotal</th></tr></thead><tbody>
+              <tr v-if="!result.transaksi.length"><td colspan="4" class="empty-state">Belum ada transaksi pada periode ini.</td></tr>
+              <tr v-for="r in result.transaksi" :key="r.id"><td>{{ tanggalIndo(r.tanggal) }}</td><td class="text-right">{{ r.qty }} L</td><td class="text-right">{{ rupiah(r.harga_satuan) }}</td><td class="text-right">{{ rupiah(r.total) }}</td></tr>
+            </tbody></table></div>
+            <p style="font-weight:600;margin-top:20px">Riwayat Pembayaran</p>
+            <div class="table-wrap"><table><thead><tr><th>Tanggal</th><th class="text-right">Jumlah</th><th>Keterangan</th></tr></thead><tbody>
+              <tr v-if="!result.pembayaran?.length"><td colspan="3" class="empty-state">Belum ada pembayaran.</td></tr>
+              <tr v-for="p in (result.pembayaran || [])" :key="p.id"><td>{{ tanggalIndo(p.tanggal_bayar) }}</td><td class="text-right">{{ rupiah(p.jumlah_bayar) }}</td><td>{{ p.keterangan || '-' }}</td></tr>
+            </tbody></table></div>
+          </template>
+          <div v-else class="table-wrap"><table><thead><tr><th>No. Transaksi</th><th>Tanggal</th><th class="text-right">Volume</th><th>Status</th><th class="text-right">Total</th><th class="text-right">Terbayar</th><th class="text-right">Sisa</th></tr></thead><tbody>
+              <tr v-if="!result.transaksi.length"><td colspan="7" class="empty-state">Belum ada transaksi pada periode ini.</td></tr>
+              <tr v-for="r in result.transaksi" :key="r.id"><td>{{ r.no_transaksi }}</td><td>{{ tanggalIndo(r.tanggal) }}</td><td class="text-right">{{ r.volume_liter }} L</td><td>{{ r.status }}</td><td class="text-right">{{ rupiah(r.total) }}</td><td class="text-right">{{ rupiah(r.sudah_bayar) }}</td><td class="text-right">{{ rupiah(Number(r.total)-Number(r.sudah_bayar)) }}</td></tr>
           </tbody></table></div>
         </div>
       </template>

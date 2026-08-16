@@ -32,7 +32,7 @@ function drawHeader(doc, logoDataUrl, documentTitle = 'INVOICE') {
   doc.triangle(wBottom, 0, wTop, 0, wBottom, H, 'F');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(documentTitle.length > 12 ? 21 : 28);
+  doc.setFontSize(documentTitle.length > 28 ? 15 : documentTitle.length > 12 ? 21 : 28);
   doc.setTextColor(255, 255, 255);
   doc.text(documentTitle, 14, 25);
 
@@ -98,10 +98,32 @@ function drawInfoBlock(doc, { noInvoice, tanggalStr, jatuhTempoStr, pihakNama, p
   return startY + 26;
 }
 
-function drawItemsTable(doc, items, startY) {
+function drawMilkData(doc, transaksi, startY) {
+  const pageW = doc.internal.pageSize.getWidth();
+  const volumePagi = Number(transaksi?.volume_pagi || 0);
+  const volumeSore = Number(transaksi?.volume_sore || 0);
+  const qualities = [
+    ['F', 'kualitas_f'], ['S', 'kualitas_s'], ['P', 'kualitas_p'],
+    ['TS', 'kualitas_ts'], ['PH', 'kualitas_ph'], ['W', 'kualitas_w'],
+  ].map(([label, key]) => `${label} ${transaksi?.[key] ?? '-'}`).join('  ·  ');
+
+  doc.setFillColor(...LIGHT_GREY);
+  doc.setDrawColor(...BORDER);
+  doc.roundedRect(14, startY, pageW - 28, 18, 2, 2, 'FD');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.8);
+  doc.setTextColor(...TEXT);
+  doc.text(`Volume: ${volumePagi + volumeSore} L (Pagi ${volumePagi} / Sore ${volumeSore})`, 19, startY + 6.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...MUTED);
+  doc.text(`Kualitas: ${qualities}`, 19, startY + 13);
+  return startY + 25;
+}
+
+function drawItemsTable(doc, items, startY, { isPurchase = false, tanggal } = {}) {
   const body = items.map((it, i) => [
     String(i + 1),
-    it.nama_produk,
+    isPurchase ? tanggalShort(it.tanggal || tanggal) : it.nama_produk,
     it.satuan ? `${it.qty} ${it.satuan}` : String(it.qty),
     rupiah(it.harga_satuan),
     rupiah(it.subtotal),
@@ -109,7 +131,7 @@ function drawItemsTable(doc, items, startY) {
 
   doc.autoTable({
     startY,
-    head: [['No', 'Produk', 'Qty', 'Harga Satuan', 'Subtotal']],
+    head: [['No', isPurchase ? 'Tanggal' : 'Produk', 'Qty', 'Harga Satuan', 'Subtotal']],
     body,
     theme: 'plain',
     styles: { fontSize: 9, cellPadding: { top: 3.6, bottom: 3.6, left: 4, right: 4 }, textColor: TEXT },
@@ -124,6 +146,29 @@ function drawItemsTable(doc, items, startY) {
     margin: { left: 14, right: 14 },
   });
 
+  return doc.lastAutoTable.finalY + 10;
+}
+
+function drawPaymentsTable(doc, payments, startY) {
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(...TEXT);
+  doc.text('Riwayat Pembayaran', 14, startY);
+
+  const body = payments.length
+    ? payments.map((p) => [tanggalShort(p.tanggal_bayar), rupiah(p.jumlah_bayar), p.keterangan || '-'])
+    : [[{ content: 'Belum ada pembayaran.', colSpan: 3, styles: { halign: 'center', textColor: MUTED, fontStyle: 'italic' } }]];
+  doc.autoTable({
+    startY: startY + 4,
+    head: [['Tanggal', 'Jumlah', 'Keterangan']],
+    body,
+    theme: 'plain',
+    styles: { fontSize: 9, cellPadding: { top: 3.4, bottom: 3.4, left: 4, right: 4 }, textColor: TEXT },
+    headStyles: { fillColor: NAVY, textColor: 255, fontStyle: 'bold', fontSize: 8.6 },
+    alternateRowStyles: { fillColor: LIGHT_GREY },
+    columnStyles: { 0: { cellWidth: 35 }, 1: { halign: 'right', cellWidth: 45 } },
+    margin: { left: 14, right: 14 },
+  });
   return doc.lastAutoTable.finalY + 10;
 }
 
@@ -161,6 +206,37 @@ function drawTotals(doc, { subtotal, pajak, total }, startY) {
   doc.text('TOTAL:', boxX + 6, lineY + 9);
   doc.text(rupiah(total), pageW - 14 - 6, lineY + 9, { align: 'right' });
 
+  return lineY + 18;
+}
+
+function drawPurchaseTotals(doc, { total, paid, remaining }, startY) {
+  const pageW = doc.internal.pageSize.getWidth();
+  const boxW = 85;
+  const boxX = pageW - 14 - boxW;
+  const rowH = 8;
+
+  doc.setDrawColor(...BORDER);
+  doc.setFillColor(...LIGHT_GREY);
+  doc.roundedRect(boxX, startY, boxW, rowH * 2 + 4, 2, 2, 'FD');
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  [['Total:', total], ['Sudah dibayar:', paid]].forEach(([label, value], index) => {
+    const y = startY + 7 + index * rowH;
+    doc.setTextColor(...MUTED);
+    doc.text(label, boxX + 6, y);
+    doc.setTextColor(...TEXT);
+    doc.text(rupiah(value), pageW - 20, y, { align: 'right' });
+  });
+
+  const lineY = startY + rowH * 2 + 4;
+  doc.setDrawColor(...NAVY);
+  doc.setLineWidth(0.4);
+  doc.line(boxX, lineY, boxX + boxW, lineY);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11.5);
+  doc.setTextColor(...TEXT);
+  doc.text('SISA:', boxX + 6, lineY + 9);
+  doc.text(rupiah(remaining), pageW - 20, lineY + 9, { align: 'right' });
   return lineY + 18;
 }
 
@@ -241,7 +317,8 @@ export async function downloadInvoicePdf(detail) {
 
   const logoDataUrl = await getLogoDataUrl().catch(() => null);
 
-  const documentTitle = detail.tipe === 'pembelian' ? 'NOTA PEMBAYARAN' : 'INVOICE';
+  const isPurchase = detail.tipe === 'pembelian';
+  const documentTitle = isPurchase ? 'DATA PENERIMAAN / PEMBAYARAN SUSU' : 'INVOICE';
   const headerH = drawHeader(doc, logoDataUrl, documentTitle);
   let y = drawMetaRow(doc, { noInvoice: detail.no_invoice, tanggal: tanggalShort(detail.tanggal) }, headerH);
   y = drawInfoBlock(doc, {
@@ -251,8 +328,16 @@ export async function downloadInvoicePdf(detail) {
     pihakNama: detail.transaksi?.pihak_nama || 'Umum',
     pihakSub: detail.transaksi?.pihak_alamat || detail.transaksi?.pihak_telepon || '',
   }, y);
-  y = drawItemsTable(doc, detail.items, y);
-  y = drawTotals(doc, { subtotal: detail.transaksi?.total, pajak: 0, total: detail.transaksi?.total }, y);
+  if (isPurchase) y = drawMilkData(doc, detail.transaksi, y);
+  y = drawItemsTable(doc, detail.items, y, { isPurchase, tanggal: detail.transaksi?.tanggal || detail.tanggal });
+  if (isPurchase) {
+    const paid = (detail.pembayaran || []).reduce((sum, p) => sum + Number(p.jumlah_bayar || 0), 0);
+    const total = Number(detail.transaksi?.total || 0);
+    y = drawPaymentsTable(doc, detail.pembayaran || [], y);
+    y = drawPurchaseTotals(doc, { total, paid, remaining: Math.max(0, total - paid) }, y);
+  } else {
+    y = drawTotals(doc, { subtotal: detail.transaksi?.total, pajak: 0, total: detail.transaksi?.total }, y);
+  }
   y = drawKeterangan(doc, detail.keterangan, y);
   drawSignature(doc, logoDataUrl, y);
   drawFooter(doc);

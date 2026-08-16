@@ -178,7 +178,7 @@ const laporanIndividu = asyncHandler(async (req, res) => {
   const [options] = tipe === 'supplier'
     ? await pool.query("SELECT id, nama, telepon, alamat FROM pelanggan_supplier WHERE tipe IN ('supplier','keduanya') ORDER BY nama")
     : await pool.query('SELECT id, nama, telepon, alamat FROM pembeli ORDER BY nama');
-  if (!id) return res.json({ tipe, options, individu: null, transaksi: [], ringkasan: null });
+  if (!id) return res.json({ tipe, options, individu: null, transaksi: [], pembayaran: [], ringkasan: null });
   const { start, end } = resolvePeriode(req.query);
 
   const individu = options.find((row) => Number(row.id) === Number(id));
@@ -186,11 +186,22 @@ const laporanIndividu = asyncHandler(async (req, res) => {
   const dateSql = ' AND t.tanggal BETWEEN ? AND ?';
   const params = [id, start, end];
   let transaksi;
+  let pembayaran = [];
   if (tipe === 'supplier') {
     [transaksi] = await pool.query(
       `SELECT t.*, (COALESCE(t.volume_pagi,0)+COALESCE(t.volume_sore,0)) AS volume_liter,
+       COALESCE((SELECT SUM(pi.qty) FROM pembelian_items pi WHERE pi.pembelian_id=t.id),0) AS qty,
+       COALESCE((SELECT SUM(pi.subtotal)/NULLIF(SUM(pi.qty),0) FROM pembelian_items pi WHERE pi.pembelian_id=t.id),0) AS harga_satuan,
        COALESCE((SELECT SUM(jumlah_bayar) FROM pembelian_pembayaran p WHERE p.pembelian_id=t.id),0) AS sudah_bayar
        FROM pembelian t WHERE t.supplier_id=?${dateSql} ORDER BY t.tanggal, t.id`, params
+    );
+    [pembayaran] = await pool.query(
+      `SELECT pp.id, pp.tanggal_bayar, pp.jumlah_bayar, pp.keterangan, t.no_transaksi
+       FROM pembelian_pembayaran pp
+       JOIN pembelian t ON t.id=pp.pembelian_id
+       WHERE t.supplier_id=?${dateSql}
+       ORDER BY pp.tanggal_bayar, pp.id`,
+      params
     );
   } else {
     [transaksi] = await pool.query(
@@ -207,7 +218,7 @@ const laporanIndividu = asyncHandler(async (req, res) => {
     acc.sisa += Number(row.total || 0) - Number(row.sudah_bayar || 0);
     return acc;
   }, { jumlah_transaksi: 0, total_volume: 0, total_nilai: 0, total_bayar: 0, sisa: 0 });
-  res.json({ tipe, options, individu, transaksi, ringkasan, periode: { start, end } });
+  res.json({ tipe, options, individu, transaksi, pembayaran, ringkasan, periode: { start, end } });
 });
 
 module.exports = {

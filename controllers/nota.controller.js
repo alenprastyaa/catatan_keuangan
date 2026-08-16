@@ -86,7 +86,12 @@ const getNotaById = asyncHandler(async (req, res) => {
     `SELECT pi.*, pr.nama_produk, pr.satuan FROM pembelian_items pi JOIN produk pr ON pr.id = pi.produk_id WHERE pi.pembelian_id = ?`,
     [nota.referensi_id]
   );
-  res.json({ ...nota, transaksi: header, items });
+  const [pembayaran] = await pool.query(
+    `SELECT id, tanggal_bayar, jumlah_bayar, keterangan
+     FROM pembelian_pembayaran WHERE pembelian_id = ? ORDER BY tanggal_bayar, id`,
+    [nota.referensi_id]
+  );
+  res.json({ ...nota, transaksi: header, items, pembayaran });
 });
 
 const createNota = asyncHandler(async (req, res) => {

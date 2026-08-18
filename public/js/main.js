@@ -1,5 +1,5 @@
 import { createApp } from 'vue';
-import { router } from './router.js?v=20260818-6';
+import { router } from './router.js?v=20260818-7';
 import App from './App.js';
 import './pwaInstall.js';
 

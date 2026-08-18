@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mitrayasa-app-v12-20260818';
+const CACHE_NAME = 'mitrayasa-app-v13-20260818';
 const APP_SHELL = ['/', '/index.html', '/css/style.css', '/manifest.json'];
 
 self.addEventListener('install', (event) => {

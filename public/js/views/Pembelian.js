@@ -3,6 +3,7 @@ import { rupiah, todayStr, tanggalIndo } from '../format.js';
 import DataTable from '../components/DataTable.js';
 import Pagination from '../components/Pagination.js';
 import Modal from '../components/Modal.js';
+import { printThermalInvoice } from '../thermalPrint.js?v=20260818-1';
 
 const STATUS_BADGE = { lunas: 'badge-success', hutang: 'badge-danger', sebagian: 'badge-warning' };
 
@@ -182,6 +183,22 @@ export default {
       if (!this.detail) return 0;
       const bayar = this.detail.pembayaran.reduce((s, p) => s + Number(p.jumlah_bayar), 0);
       return Number(this.detail.total) - bayar;
+    },
+    printThermal() {
+      if (!this.detail) return;
+      printThermalInvoice({
+        tipe: 'pembelian',
+        no_invoice: this.detail.no_transaksi,
+        tanggal: this.detail.tanggal,
+        jatuh_tempo: this.detail.jatuh_tempo,
+        keterangan: this.detail.catatan,
+        transaksi: {
+          ...this.detail,
+          pihak_nama: this.detail.supplier_nama,
+        },
+        items: this.detail.items,
+        pembayaran: this.detail.pembayaran,
+      });
     },
   },
   template: `
@@ -392,6 +409,9 @@ export default {
 
           <p style="text-align:right">Total: {{ rupiah(detail.total) }} &nbsp;|&nbsp; Sisa: <strong>{{ rupiah(sisaBayar()) }}</strong></p>
           <p v-if="detail.status !== 'lunas'" class="text-muted" style="text-align:right;font-size:0.85rem">Gunakan tombol "Edit" untuk mencatat pembayaran.</p>
+          <div class="detail-print-actions">
+            <button type="button" class="btn-primary" @click="printThermal">Cetak Thermal 80mm</button>
+          </div>
         </div>
       </Modal>
     </div>

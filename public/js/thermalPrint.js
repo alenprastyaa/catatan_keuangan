@@ -6,7 +6,7 @@ const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({
 
 const angka = (value) => new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format(Number(value || 0));
 
-export function printThermalMilkReport(report, { documentNo = '', note = '' } = {}) {
+export function printThermalMilkReport(report, { documentNo = '', note = '', documentTitle = 'DATA PENERIMAAN / PEMBAYARAN SUSU', numberLabel = 'No.' } = {}) {
   const transactions = report.transaksi || [];
   const payments = report.pembayaran || [];
   const party = report.individu || {};
@@ -55,10 +55,10 @@ export function printThermalMilkReport(report, { documentNo = '', note = '' } = 
     .payment{padding:4px 0;border-bottom:1px dotted #999}.payment small{text-align:left}.empty{text-align:center;padding:14px 0;color:#555}.compact{padding:6px 0}.notes{white-space:pre-wrap;margin-top:7px}.footer{margin:12px 0 4px;text-align:center;font-size:8px}
     @media print{body{width:72mm}}
   </style></head><body>
-    <div class="center"><div class="brand">MITRAYASA DAIRY NATURAL</div><div class="sub">Jl. Pagerageung No. 28, Tasikmalaya · 0813 8538 9191</div><div class="title">DATA PENERIMAAN / PEMBAYARAN SUSU</div></div>
+    <div class="center"><div class="brand">MITRAYASA DAIRY NATURAL</div><div class="sub">Jl. Pagerageung No. 28, Tasikmalaya · 0813 8538 9191</div><div class="title">${esc(documentTitle)}</div></div>
     <div class="dash"></div><div class="party">${esc(party.nama || 'Supplier')}</div>
     ${party.alamat || party.telepon ? `<div class="sub">${esc(party.alamat || party.telepon)}</div>` : ''}
-    ${documentNo ? `<div class="meta line"><span>No.</span><span>${esc(documentNo)}</span></div>` : ''}
+    ${documentNo ? `<div class="meta line"><span>${esc(numberLabel)}</span><span>${esc(documentNo)}</span></div>` : ''}
     ${periodLabel ? `<div class="meta line"><span>Periode</span><span>${esc(periodLabel)}</span></div>` : ''}
     ${transactionRows}
     <div class="summary"><div class="line"><span>Jumlah volume</span><b>${esc(angka(totalVolume))} L</b></div><div class="line"><span>Nilai susu</span><span>${esc(rupiah(totalGross))}</span></div><div class="line"><span>Potongan</span><span>-${esc(rupiah(totalPotongan))}</span></div><div class="line grand"><span>TOTAL PEMBAYARAN</span><span>${esc(rupiah(totalNet))}</span></div><div class="line"><span>Sudah dibayar</span><span>${esc(rupiah(totalPaid))}</span></div><div class="line"><b>SISA</b><b>${esc(rupiah(remaining))}</b></div></div>
@@ -89,10 +89,12 @@ export function printThermalInvoice(detail) {
         total_bayar: paid,
         sisa: Math.max(0, total - paid),
       },
-    }, { documentNo: detail.no_invoice, note: detail.keterangan });
+    }, { documentNo: detail.no_invoice, note: detail.keterangan, documentTitle: 'NOTA PEMBAYARAN SUSU', numberLabel: 'No. Nota' });
   }
   const volume = Number(tx.volume_pagi || 0) + Number(tx.volume_sore || 0);
-  const documentTitle = isPurchase ? 'DATA PENERIMAAN / PEMBAYARAN SUSU' : 'INVOICE PENJUALAN';
+  const documentTitle = isPurchase ? 'NOTA PEMBAYARAN SUSU' : 'INVOICE PENJUALAN';
+  const numberLabel = isPurchase ? 'No. Nota' : 'No. Invoice';
+  const dateLabel = isPurchase ? 'Tanggal Nota' : 'Tanggal Invoice';
   const rows = items.length
     ? items.map((it) => `<div class="item"><b>${esc(isPurchase ? tanggalIndo(it.tanggal || tx.tanggal || detail.tanggal) : it.nama_produk || it.nama_item)}</b><div class="line"><span>${esc(it.qty)} ${esc(it.satuan || '')} × ${esc(rupiah(it.harga_satuan))}</span><span>${esc(rupiah(it.subtotal))}</span></div></div>`).join('')
     : '<div class="empty">— Invoice kosong —</div>';
@@ -116,7 +118,7 @@ export function printThermalInvoice(detail) {
   </style></head><body>
     <div class="center"><div class="brand">MITRAYASA DAIRY NATURAL</div><div class="sub">Jl. Pagerageung No. 28, Tasikmalaya</div><div class="sub">0813 8538 9191</div></div>
     <div class="dash"></div><div class="center"><b>${documentTitle}</b></div>
-    <div class="meta line"><span>No</span><span>${esc(detail.no_invoice)}</span></div><div class="meta line"><span>Tanggal</span><span>${esc(tanggalIndo(detail.tanggal))}</span></div>
+    <div class="meta line"><span>${numberLabel}</span><span>${esc(detail.no_invoice)}</span></div><div class="meta line"><span>${dateLabel}</span><span>${esc(tanggalIndo(detail.tanggal))}</span></div>
     <div class="party">${esc(tx.pihak_nama || 'Umum')}</div><div class="sub">${esc(tx.pihak_alamat || tx.pihak_telepon || '')}</div>
     ${volume || quality ? `<div class="milk"><div class="milk-title">DATA SUSU</div>${volume ? `<div class="line"><span>Pagi ${esc(tx.volume_pagi || 0)} L</span><span>Sore ${esc(tx.volume_sore || 0)} L</span></div><div class="line"><b>Total volume</b><b>${esc(volume)} L</b></div>` : ''}${quality ? `<div class="sub">${quality}</div>` : ''}</div>` : ''}
     <div class="dash"></div>${rows}

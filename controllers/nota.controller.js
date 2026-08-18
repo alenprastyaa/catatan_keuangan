@@ -98,7 +98,7 @@ const createNota = asyncHandler(async (req, res) => {
   const { no_invoice, tipe, referensi_id, tanggal, jatuh_tempo, status, keterangan,
     pihak_nama, pihak_alamat, pihak_telepon, items = [] } = req.body;
   if (!no_invoice || !tipe || !tanggal) {
-    return res.status(400).json({ message: 'No invoice, tipe, dan tanggal wajib diisi.' });
+    return res.status(400).json({ message: 'Nomor nota, tipe, dan tanggal wajib diisi.' });
   }
   if (keteranganTerlaluPanjang(keterangan)) {
     return res.status(400).json({ message: 'Keterangan maksimal 1000 karakter.' });
@@ -139,7 +139,7 @@ const updateNota = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { jatuh_tempo, status, keterangan } = req.body;
   if (!['paid', 'unpaid', 'overdue'].includes(status)) {
-    return res.status(400).json({ message: 'Status invoice tidak valid.' });
+    return res.status(400).json({ message: 'Status nota tidak valid.' });
   }
   if (keteranganTerlaluPanjang(keterangan)) {
     return res.status(400).json({ message: 'Keterangan maksimal 1000 karakter.' });

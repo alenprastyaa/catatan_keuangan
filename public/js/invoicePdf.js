@@ -47,14 +47,14 @@ function drawHeader(doc, logoDataUrl, documentTitle = 'INVOICE') {
   return H;
 }
 
-function drawMetaRow(doc, { noInvoice, tanggal }, headerH) {
+function drawMetaRow(doc, { documentNo, tanggal, numberLabel = 'No. Invoice', dateLabel = 'Tanggal Invoice' }, headerH) {
   const pageW = doc.internal.pageSize.getWidth();
   let y = headerH + 9;
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(...TEXT);
-  doc.text(`Invoice No: ${noInvoice}      Date: ${tanggal}`, pageW - 14, y, { align: 'right' });
+  doc.text(`${numberLabel}: ${documentNo}      ${dateLabel}: ${tanggal}`, pageW - 14, y, { align: 'right' });
 
   y += 5;
   doc.setFillColor(...NAVY);
@@ -63,13 +63,13 @@ function drawMetaRow(doc, { noInvoice, tanggal }, headerH) {
   return y + 12;
 }
 
-function drawInfoBlock(doc, { noInvoice, tanggalStr, jatuhTempoStr, pihakNama, pihakSub }, startY) {
+function drawInfoBlock(doc, { documentNo, tanggalStr, jatuhTempoStr, pihakNama, pihakSub, numberLabel = 'No. Invoice' }, startY) {
   const leftLabelX = 14;
   const leftValueX = 50;
   const rightX = 118;
 
   const rows = [
-    ['No Invoice:', noInvoice],
+    [`${numberLabel}:`, documentNo],
     ['Tanggal:', tanggalStr],
     ['Jatuh Tempo:', jatuhTempoStr],
   ];
@@ -318,11 +318,14 @@ export async function downloadInvoicePdf(detail) {
   const logoDataUrl = await getLogoDataUrl().catch(() => null);
 
   const isPurchase = detail.tipe === 'pembelian';
-  const documentTitle = isPurchase ? 'DATA PENERIMAAN / PEMBAYARAN SUSU' : 'INVOICE';
+  const documentTitle = isPurchase ? 'NOTA PEMBAYARAN SUSU' : 'INVOICE PENJUALAN';
+  const numberLabel = isPurchase ? 'No. Nota' : 'No. Invoice';
+  const dateLabel = isPurchase ? 'Tanggal Nota' : 'Tanggal Invoice';
   const headerH = drawHeader(doc, logoDataUrl, documentTitle);
-  let y = drawMetaRow(doc, { noInvoice: detail.no_invoice, tanggal: tanggalShort(detail.tanggal) }, headerH);
+  let y = drawMetaRow(doc, { documentNo: detail.no_invoice, tanggal: tanggalShort(detail.tanggal), numberLabel, dateLabel }, headerH);
   y = drawInfoBlock(doc, {
-    noInvoice: detail.no_invoice,
+    documentNo: detail.no_invoice,
+    numberLabel,
     tanggalStr: tanggalShort(detail.tanggal),
     jatuhTempoStr: detail.jatuh_tempo ? tanggalShort(detail.jatuh_tempo) : '-',
     pihakNama: detail.transaksi?.pihak_nama || 'Umum',

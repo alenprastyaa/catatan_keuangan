@@ -3,8 +3,8 @@ import { rupiah, todayStr, tanggalIndo } from '../format.js';
 import DataTable from '../components/DataTable.js';
 import Pagination from '../components/Pagination.js';
 import Modal from '../components/Modal.js';
-import { downloadInvoicePdf } from '../invoicePdf.js?v=20260816-1';
-import { printThermalInvoice } from '../thermalPrint.js?v=20260816-2';
+import { downloadInvoicePdf } from '../invoicePdf.js?v=20260818-2';
+import { printThermalInvoice } from '../thermalPrint.js?v=20260818-2';
 
 const STATUS_BADGE = { paid: 'badge-success', unpaid: 'badge-warning', overdue: 'badge-danger' };
 
@@ -29,7 +29,7 @@ export default {
       showEditModal: false, editForm: { id: null, jatuh_tempo: '', status: 'unpaid', keterangan: '' }, editError: '',
       showDetailModal: false, detail: null,
       columns: [
-        { key: 'no_invoice', label: 'No. Invoice' },
+        { key: 'no_invoice', label: 'No. Dokumen' },
         { key: 'tipe', label: 'Tipe' },
         { key: 'tanggal', label: 'Tanggal' },
         { key: 'jatuh_tempo', label: 'Jatuh Tempo' },
@@ -43,6 +43,8 @@ export default {
   },
   methods: {
     rupiah, tanggalIndo,
+    nomorLabel(doc) { return doc?.tipe === 'pembelian' ? 'No. Nota' : 'No. Invoice'; },
+    tanggalLabel(doc) { return doc?.tipe === 'pembelian' ? 'Tanggal Nota' : 'Tanggal Invoice'; },
     statusBadge(s) { return STATUS_BADGE[s] || 'badge-muted'; },
     totalPembayaran() {
       return (this.detail?.pembayaran || []).reduce((sum, p) => sum + Number(p.jumlah_bayar || 0), 0);
@@ -79,7 +81,7 @@ export default {
     },
     async save() {
       this.error = '';
-      if (!this.form.manual && !this.form.referensi_id) { this.error = 'Pilih transaksi referensi atau gunakan mode invoice manual.'; return; }
+      if (!this.form.manual && !this.form.referensi_id) { this.error = 'Pilih transaksi referensi atau gunakan mode nota manual.'; return; }
       try {
         await api.post('/nota', { ...this.form, referensi_id: this.form.manual ? null : this.form.referensi_id });
         this.showFormModal = false;
@@ -151,7 +153,7 @@ export default {
           <input id="filter-nota" class="filter-toggle-control" type="checkbox" />
           <label for="filter-nota" class="filter-toggle"><span>Filter data</span><span class="filter-chevron">⌄</span></label>
           <div class="filter-fields">
-            <input type="text" v-model="search" @input="onFilterChange" placeholder="Cari no. invoice..." style="width:220px" />
+            <input type="text" v-model="search" @input="onFilterChange" placeholder="Cari nomor dokumen..." style="width:220px" />
             <select v-model="tipe" @change="onFilterChange">
               <option value="">Semua Tipe</option>
               <option value="penjualan">Penjualan</option>
@@ -166,7 +168,7 @@ export default {
           </div>
         </div>
         <div class="spacer"></div>
-        <button class="btn-primary" @click="openCreate">+ Buat Nota / Invoice</button>
+        <button class="btn-primary" @click="openCreate">+ Buat Nota</button>
       </div>
 
       <DataTable :columns="columns" :rows="rows" :loading="loading">
@@ -182,10 +184,10 @@ export default {
       </DataTable>
       <Pagination :total="total" :page="page" :limit="limit" @update:page="changePage" />
 
-      <Modal :show="showFormModal" title="Buat Nota / Invoice" @close="showFormModal = false">
+      <Modal :show="showFormModal" title="Buat Nota" @close="showFormModal = false">
         <form @submit.prevent="save">
           <div class="field">
-            <label>No. Invoice</label>
+            <label>{{ form.tipe === 'pembelian' ? 'No. Nota' : 'No. Invoice' }}</label>
             <input v-model="form.no_invoice" required style="width:100%" />
           </div>
           <div class="field-row">
@@ -204,7 +206,7 @@ export default {
               </select>
             </div>
           </div>
-          <label class="manual-invoice-toggle"><input type="checkbox" v-model="form.manual" /> Buat invoice manual / invoice kosong</label>
+          <label class="manual-invoice-toggle"><input type="checkbox" v-model="form.manual" /> Buat nota manual / nota kosong</label>
           <div v-if="form.manual" class="manual-invoice-box">
             <div class="field-row">
               <div class="field"><label>Nama Pihak</label><input v-model="form.pihak_nama" placeholder="Boleh dikosongkan" style="width:100%" /></div>
@@ -243,7 +245,7 @@ export default {
         </template>
       </Modal>
 
-      <Modal :show="showEditModal" title="Edit Invoice" @close="showEditModal = false">
+      <Modal :show="showEditModal" title="Edit Nota" @close="showEditModal = false">
         <form @submit.prevent="saveEdit">
           <div class="field-row">
             <div class="field">
@@ -261,7 +263,7 @@ export default {
           </div>
           <div class="field">
             <label>Keterangan</label>
-            <textarea v-model="editForm.keterangan" rows="4" maxlength="1000" style="width:100%" placeholder="Tulis keterangan yang akan tampil di invoice"></textarea>
+            <textarea v-model="editForm.keterangan" rows="4" maxlength="1000" style="width:100%" placeholder="Tulis keterangan yang akan tampil di nota"></textarea>
           </div>
           <p v-if="editError" class="error-text">{{ editError }}</p>
         </form>
@@ -275,20 +277,20 @@ export default {
         <div v-if="detail" class="print-area invoice-doc">
           <div class="invoice-header">
             <div class="invoice-header-diagonal">
-              <span class="invoice-header-title" :class="{ 'invoice-header-title-long': detail.tipe === 'pembelian' }">{{ detail.tipe === 'pembelian' ? 'DATA PENERIMAAN / PEMBAYARAN SUSU' : 'INVOICE' }}</span>
+              <span class="invoice-header-title" :class="{ 'invoice-header-title-long': detail.tipe === 'pembelian' }">{{ detail.tipe === 'pembelian' ? 'NOTA PEMBAYARAN SUSU' : 'INVOICE PENJUALAN' }}</span>
             </div>
             <img class="invoice-header-logo" src="/img/logo.png" alt="Mitrayasa" />
           </div>
           <div class="invoice-meta-row">
-            <span>Invoice No: {{ detail.no_invoice }}</span>
-            <span>Date: {{ tanggalIndo(detail.tanggal) }}</span>
+            <span>{{ nomorLabel(detail) }}: {{ detail.no_invoice }}</span>
+            <span>{{ tanggalLabel(detail) }}: {{ tanggalIndo(detail.tanggal) }}</span>
           </div>
           <div class="invoice-divider"></div>
 
           <div class="invoice-info-grid">
             <div>
-              <p><strong>No Invoice:</strong> {{ detail.no_invoice }}</p>
-              <p><strong>Tanggal:</strong> {{ tanggalIndo(detail.tanggal) }}</p>
+              <p><strong>{{ nomorLabel(detail) }}:</strong> {{ detail.no_invoice }}</p>
+              <p><strong>{{ tanggalLabel(detail) }}:</strong> {{ tanggalIndo(detail.tanggal) }}</p>
               <p><strong>Jatuh Tempo:</strong> {{ detail.jatuh_tempo ? tanggalIndo(detail.jatuh_tempo) : '-' }}</p>
               <p><span class="badge" :class="statusBadge(detail.status)">{{ detail.status }}</span></p>
             </div>

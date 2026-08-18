@@ -59,7 +59,7 @@ export function printThermalMilkReport(report, { documentNo = '', note = '', doc
     .payment{padding:4px 0;border-bottom:1px dotted #999}.payment small{text-align:left}.empty{text-align:center;padding:14px 0;color:#555}.compact{padding:6px 0}.notes{white-space:pre-wrap;margin-top:7px}.footer{margin:12px 0 4px;text-align:center;font-size:8px}
     @media print{body{width:72mm}}
   </style></head><body>
-    <div class="center"><img class="thermal-logo" src="${esc(logoUrl)}" alt="Mitrayasa"><div class="brand">MITRAYASA DAIRY NATURAL</div><div class="sub">Jl. Pagerageung No. 28, Tasikmalaya · 0813 8538 9191</div><div class="title">${esc(documentTitle)}</div></div>
+    <div class="center"><img class="thermal-logo" src="${esc(logoUrl)}" alt="Mitrayasa"><div class="title">${esc(documentTitle)}</div></div>
     <div class="dash"></div><div class="party">${esc(party.nama || 'Supplier')}</div>
     ${party.alamat || party.telepon ? `<div class="sub">${esc(party.alamat || party.telepon)}</div>` : ''}
     ${documentNo ? `<div class="meta line"><span>${esc(numberLabel)}</span><span>${esc(documentNo)}</span></div>` : ''}
@@ -74,6 +74,7 @@ export function printThermalMilkReport(report, { documentNo = '', note = '', doc
 }
 
 export function printThermalInvoice(detail) {
+  const logoUrl = `${window.location.origin}/img/logo.png`;
   const tx = detail.transaksi || {};
   const items = detail.items || [];
   const isPurchase = detail.tipe === 'pembelian';
@@ -114,13 +115,13 @@ export function printThermalInvoice(detail) {
   if (!popup) throw new Error('Popup diblokir browser. Izinkan popup untuk mencetak thermal.');
   popup.document.write(`<!doctype html><html><head><title>${esc(detail.no_invoice)}</title><style>
     @page{size:80mm auto;margin:3mm}*{box-sizing:border-box}body{width:72mm;margin:0 auto;color:#111;font:11px/1.35 Arial,sans-serif}
-    .center{text-align:center}.brand{font-size:15px;font-weight:800;letter-spacing:.4px}.sub{font-size:9px}.dash{border-top:1px dashed #111;margin:7px 0}
+    .center{text-align:center}.thermal-logo{display:block;width:47mm;max-height:18mm;object-fit:contain;margin:0 auto 4px}.sub{font-size:9px}.dash{border-top:1px dashed #111;margin:7px 0}
     .line{display:flex;justify-content:space-between;gap:8px}.line span:last-child{text-align:right}.meta{margin:2px 0}.party{font-size:12px;font-weight:700;margin-top:5px}
     .item{padding:5px 0;border-bottom:1px dotted #999}.empty{text-align:center;padding:16px 0;color:#666}.total{font-size:14px;font-weight:800;margin-top:7px}
     .milk{border:1px solid #111;padding:5px;margin:6px 0}.milk-title,.section-title{font-weight:700;margin-bottom:3px}.payment{padding:4px 0;border-bottom:1px dotted #999}.compact{padding:6px 0}.notes{white-space:pre-wrap;margin-top:6px}.footer{margin:12px 0 4px;text-align:center;font-size:9px}
     @media print{body{width:72mm}.no-print{display:none}}
   </style></head><body>
-    <div class="center"><div class="brand">MITRAYASA DAIRY NATURAL</div><div class="sub">Jl. Pagerageung No. 28, Tasikmalaya</div><div class="sub">0813 8538 9191</div></div>
+    <div class="center"><img class="thermal-logo" src="${esc(logoUrl)}" alt="Mitrayasa"></div>
     <div class="dash"></div><div class="center"><b>${documentTitle}</b></div>
     <div class="meta line"><span>${numberLabel}</span><span>${esc(detail.no_invoice)}</span></div><div class="meta line"><span>${dateLabel}</span><span>${esc(tanggalIndo(detail.tanggal))}</span></div>
     <div class="party">${esc(tx.pihak_nama || 'Umum')}</div><div class="sub">${esc(tx.pihak_alamat || tx.pihak_telepon || '')}</div>

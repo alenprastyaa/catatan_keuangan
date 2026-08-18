@@ -35,6 +35,18 @@ export default {
     usesPeriod() {
       return PERIOD_TABS.includes(this.activeTab);
     },
+    milkReportTotals() {
+      const transactions = this.result?.transaksi || [];
+      const totalPotongan = transactions.reduce((sum, row) => sum + this.transactionDeductionTotal(row), 0);
+      const totalNet = Number(this.result?.ringkasan?.total_nilai || 0);
+      return {
+        pagi: transactions.reduce((sum, row) => sum + Number(row.volume_pagi || 0), 0),
+        sore: transactions.reduce((sum, row) => sum + Number(row.volume_sore || 0), 0),
+        potongan: totalPotongan,
+        gross: totalNet + totalPotongan,
+        net: totalNet,
+      };
+    },
   },
   mounted() {
     this.load();
@@ -49,6 +61,22 @@ export default {
   },
   methods: {
     rupiah, tanggalIndo,
+    transactionDeductionTotal(row) {
+      if (Array.isArray(row.potongan_items) && row.potongan_items.length) {
+        return row.potongan_items.reduce((sum, item) => sum + Number(item.jumlah || 0), 0);
+      }
+      return Number(row.potongan || 0);
+    },
+    transactionDeductionText(row) {
+      if (Array.isArray(row.potongan_items) && row.potongan_items.length) {
+        return row.potongan_items.map((item) => `${item.keterangan || 'Potongan'}: -${rupiah(item.jumlah)}`).join('\n');
+      }
+      return Number(row.potongan || 0) ? `Potongan: -${rupiah(row.potongan)}` : '-';
+    },
+    transactionQualityText(row) {
+      return [['F', 'kualitas_f'], ['S', 'kualitas_s'], ['P', 'kualitas_p'], ['TS', 'kualitas_ts'], ['pH', 'kualitas_ph'], ['W', 'kualitas_w']]
+        .map(([label, key]) => `${label} ${row[key] ?? '-'}`).join(' · ');
+    },
     switchTab(key) {
       this.activeTab = key;
       this.load();
@@ -117,10 +145,10 @@ export default {
           ...r.konsumen.map((x) => ['Konsumen', x.nama, '', x.telepon, x.alamat])];
       } else if (this.activeTab === 'individu') {
         if (this.individuTipe === 'supplier') {
-          rows = [['Tanggal', 'Qty', 'Harga', 'Subtotal'],
-            ...r.transaksi.map((x) => [x.tanggal, x.qty, x.harga_satuan, x.total]),
-            [], ['Riwayat Pembayaran'], ['Tanggal', 'Jumlah', 'Keterangan'],
-            ...(r.pembayaran || []).map((x) => [x.tanggal_bayar, x.jumlah_bayar, x.keterangan || '-'])];
+          rows = [['Tanggal', 'No. Transaksi', 'Kualitas', 'Pagi (L)', 'Sore (L)', 'Jumlah (L)', 'Harga/L', 'Nilai Susu', 'Potongan', 'Total Pembayaran'],
+            ...r.transaksi.map((x) => [x.tanggal, x.no_transaksi, this.transactionQualityText(x), x.volume_pagi, x.volume_sore, x.volume_liter || x.qty, x.harga_satuan, Number(x.total) + this.transactionDeductionTotal(x), this.transactionDeductionText(x), x.total]),
+            [], ['Riwayat Pembayaran'], ['Tanggal', 'No. Transaksi', 'Jumlah', 'Keterangan'],
+            ...(r.pembayaran || []).map((x) => [x.tanggal_bayar, x.no_transaksi || '-', x.jumlah_bayar, x.keterangan || '-'])];
         } else {
           rows = [['No. Transaksi', 'Tanggal', 'Volume (L)', 'Status', 'Total', 'Terbayar', 'Sisa'],
             ...r.transaksi.map((x) => [x.no_transaksi, x.tanggal, x.volume_liter, x.status, x.total, x.sudah_bayar, Number(x.total) - Number(x.sudah_bayar)])];
@@ -296,24 +324,36 @@ export default {
             subtitle: `${this.result.individu.nama} · ${common.subtitle || ''}`,
             stats: [
               { label: 'Volume', value: `${this.result.ringkasan.total_volume} L` },
-              { label: 'Total Penerimaan', value: rupiah(this.result.ringkasan.total_nilai) },
-              { label: 'Total Dibayar', value: rupiah(this.result.ringkasan.total_bayar), accent: [11, 138, 97] },
+              { label: 'Nilai Susu', value: rupiah(this.milkReportTotals.gross) },
+              { label: 'Potongan', value: `-${rupiah(this.milkReportTotals.potongan)}`, accent: [180, 83, 9] },
+              { label: 'Total Pembayaran', value: rupiah(this.milkReportTotals.net) },
+              { label: 'Sudah Dibayar', value: rupiah(this.result.ringkasan.total_bayar), accent: [11, 138, 97] },
               { label: 'Sisa', value: rupiah(this.result.ringkasan.sisa), accent: [207, 52, 52] },
             ],
             sections: [
               {
                 heading: 'Data Penerimaan Susu',
-                columns: ['Tanggal', 'Qty', 'Harga', 'Subtotal'],
-                rows: this.result.transaksi.map((r) => [tanggalIndo(r.tanggal), `${r.qty} L`, rupiah(r.harga_satuan), rupiah(r.total)]),
-                foot: ['', '', 'Total', rupiah(this.result.ringkasan.total_nilai)],
-                columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' } },
+                columns: ['Tanggal / No.', 'Kualitas', 'Pagi', 'Sore', 'Jumlah', 'Harga/L', 'Nilai Susu', 'Potongan', 'Total Pembayaran'],
+                rows: this.result.transaksi.map((r) => [
+                  `${tanggalIndo(r.tanggal)}\n${r.no_transaksi || '-'}`,
+                  this.transactionQualityText(r),
+                  `${Number(r.volume_pagi || 0)} L`,
+                  `${Number(r.volume_sore || 0)} L`,
+                  `${Number(r.volume_liter || r.qty || 0)} L`,
+                  rupiah(r.harga_satuan),
+                  rupiah(Number(r.total || 0) + this.transactionDeductionTotal(r)),
+                  this.transactionDeductionText(r),
+                  rupiah(r.total),
+                ]),
+                foot: ['', 'TOTAL', `${this.milkReportTotals.pagi} L`, `${this.milkReportTotals.sore} L`, `${this.result.ringkasan.total_volume} L`, '-', rupiah(this.milkReportTotals.gross), `-${rupiah(this.milkReportTotals.potongan)}`, rupiah(this.milkReportTotals.net)],
+                columnStyles: { 0: { cellWidth: 29 }, 1: { cellWidth: 35 }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { cellWidth: 39 }, 8: { halign: 'right' } },
               },
               {
                 heading: 'Riwayat Pembayaran',
-                columns: ['Tanggal', 'Jumlah', 'Keterangan'],
-                rows: (this.result.pembayaran || []).map((p) => [tanggalIndo(p.tanggal_bayar), rupiah(p.jumlah_bayar), p.keterangan || '-']),
-                foot: ['', 'Total Dibayar', rupiah(this.result.ringkasan.total_bayar)],
-                columnStyles: { 1: { halign: 'right' } },
+                columns: ['Tanggal', 'No. Transaksi', 'Jumlah', 'Keterangan'],
+                rows: (this.result.pembayaran || []).map((p) => [tanggalIndo(p.tanggal_bayar), p.no_transaksi || '-', rupiah(p.jumlah_bayar), p.keterangan || '-']),
+                foot: ['', '', 'Total Dibayar', rupiah(this.result.ringkasan.total_bayar)],
+                columnStyles: { 2: { halign: 'right' } },
               },
             ],
           });
@@ -548,20 +588,30 @@ export default {
           <div class="summary-grid" v-if="result.ringkasan">
             <div class="card summary-card"><div class="label">Transaksi</div><div class="value">{{ result.ringkasan.jumlah_transaksi }}</div></div>
             <div class="card summary-card"><div class="label">Volume</div><div class="value">{{ result.ringkasan.total_volume }} L</div></div>
-            <div class="card summary-card"><div class="label">Total Nilai</div><div class="value">{{ rupiah(result.ringkasan.total_nilai) }}</div></div>
+            <div class="card summary-card"><div class="label">{{ individuTipe === 'supplier' ? 'Total Pembayaran' : 'Total Nilai' }}</div><div class="value">{{ rupiah(result.ringkasan.total_nilai) }}</div></div>
             <div class="card summary-card"><div class="label">Terbayar</div><div class="value">{{ rupiah(result.ringkasan.total_bayar) }}</div></div>
             <div class="card summary-card"><div class="label">Sisa</div><div class="value">{{ rupiah(result.ringkasan.sisa) }}</div></div>
           </div>
           <template v-if="individuTipe === 'supplier'">
             <p style="font-weight:600">Data Penerimaan Susu</p>
-            <div class="table-wrap"><table><thead><tr><th>Tanggal</th><th class="text-right">Qty</th><th class="text-right">Harga</th><th class="text-right">Subtotal</th></tr></thead><tbody>
-              <tr v-if="!result.transaksi.length"><td colspan="4" class="empty-state">Belum ada transaksi pada periode ini.</td></tr>
-              <tr v-for="r in result.transaksi" :key="r.id"><td>{{ tanggalIndo(r.tanggal) }}</td><td class="text-right">{{ r.qty }} L</td><td class="text-right">{{ rupiah(r.harga_satuan) }}</td><td class="text-right">{{ rupiah(r.total) }}</td></tr>
+            <div class="table-wrap"><table><thead><tr><th>Tanggal / No.</th><th>Kualitas</th><th class="text-right">Pagi</th><th class="text-right">Sore</th><th class="text-right">Jumlah</th><th class="text-right">Harga/L</th><th class="text-right">Nilai Susu</th><th>Potongan</th><th class="text-right">Total Pembayaran</th></tr></thead><tbody>
+              <tr v-if="!result.transaksi.length"><td colspan="9" class="empty-state">Belum ada transaksi pada periode ini.</td></tr>
+              <tr v-for="r in result.transaksi" :key="r.id">
+                <td>{{ tanggalIndo(r.tanggal) }}<br><small>{{ r.no_transaksi }}</small></td><td>{{ transactionQualityText(r) }}</td>
+                <td class="text-right">{{ Number(r.volume_pagi || 0) }} L</td><td class="text-right">{{ Number(r.volume_sore || 0) }} L</td><td class="text-right">{{ Number(r.volume_liter || r.qty || 0) }} L</td>
+                <td class="text-right">{{ rupiah(r.harga_satuan) }}</td><td class="text-right">{{ rupiah(Number(r.total || 0) + transactionDeductionTotal(r)) }}</td>
+                <td style="white-space:pre-line">{{ transactionDeductionText(r) }}</td><td class="text-right"><strong>{{ rupiah(r.total) }}</strong></td>
+              </tr>
             </tbody></table></div>
+            <div class="detail-summary" style="margin-top:12px">
+              <span>Nilai susu: <strong>{{ rupiah(milkReportTotals.gross) }}</strong></span> &nbsp;|&nbsp;
+              <span>Potongan: <strong>-{{ rupiah(milkReportTotals.potongan) }}</strong></span> &nbsp;|&nbsp;
+              <span>Total pembayaran: <strong>{{ rupiah(milkReportTotals.net) }}</strong></span>
+            </div>
             <p style="font-weight:600;margin-top:20px">Riwayat Pembayaran</p>
-            <div class="table-wrap"><table><thead><tr><th>Tanggal</th><th class="text-right">Jumlah</th><th>Keterangan</th></tr></thead><tbody>
-              <tr v-if="!result.pembayaran?.length"><td colspan="3" class="empty-state">Belum ada pembayaran.</td></tr>
-              <tr v-for="p in (result.pembayaran || [])" :key="p.id"><td>{{ tanggalIndo(p.tanggal_bayar) }}</td><td class="text-right">{{ rupiah(p.jumlah_bayar) }}</td><td>{{ p.keterangan || '-' }}</td></tr>
+            <div class="table-wrap"><table><thead><tr><th>Tanggal</th><th>No. Transaksi</th><th class="text-right">Jumlah</th><th>Keterangan</th></tr></thead><tbody>
+              <tr v-if="!result.pembayaran?.length"><td colspan="4" class="empty-state">Belum ada pembayaran.</td></tr>
+              <tr v-for="p in (result.pembayaran || [])" :key="p.id"><td>{{ tanggalIndo(p.tanggal_bayar) }}</td><td>{{ p.no_transaksi || '-' }}</td><td class="text-right">{{ rupiah(p.jumlah_bayar) }}</td><td>{{ p.keterangan || '-' }}</td></tr>
             </tbody></table></div>
           </template>
           <div v-else class="table-wrap"><table><thead><tr><th>No. Transaksi</th><th>Tanggal</th><th class="text-right">Volume</th><th>Status</th><th class="text-right">Total</th><th class="text-right">Terbayar</th><th class="text-right">Sisa</th></tr></thead><tbody>

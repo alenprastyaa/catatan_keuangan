@@ -266,14 +266,26 @@ export default {
               <input type="number" min="0" v-model.number="form.bayar_awal" style="width:100%" />
             </div>
           </div>
-          <div class="field">
-            <label>Catatan</label>
-            <input v-model="form.catatan" style="width:100%" />
+          <div class="purchase-extra-grid">
+            <div class="purchase-extra-card">
+              <div class="purchase-extra-icon note">✎</div>
+              <div class="field">
+                <label>Catatan Transaksi</label>
+                <textarea v-model="form.catatan" rows="3" maxlength="1000" placeholder="Contoh: Kondisi susu, jadwal pengambilan, atau informasi tambahan" style="width:100%"></textarea>
+              </div>
+            </div>
+            <div class="purchase-extra-card">
+              <div class="purchase-extra-icon deduction">−</div>
+              <div class="field">
+                <label>Potongan Pembayaran (Rp)</label>
+                <input type="number" min="0" v-model.number="form.potongan" placeholder="0" style="width:100%" />
+                <small class="text-muted">Potongan akan mengurangi total transaksi.</small>
+              </div>
+            </div>
           </div>
 
           <div class="milk-data-card">
             <div class="milk-data-title"><strong>Data Kualitas Susu</strong></div>
-            <div class="field"><label>Potongan (Rp)</label><input type="number" min="0" v-model.number="form.potongan" style="width:100%" /></div>
             <div class="quality-grid">
               <div v-for="key in ['f','s','p','ts','ph','w']" :key="key" class="field"><label>{{ key.toUpperCase() }}</label><input type="number" step="0.01" v-model.number="form['kualitas_' + key]" /></div>
             </div>

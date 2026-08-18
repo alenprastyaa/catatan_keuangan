@@ -11,6 +11,25 @@ function angkaAtauNull(value) {
   return value === '' || value === null || value === undefined ? null : Number(value);
 }
 
+function rincianPotongan(body) {
+  if (Object.prototype.hasOwnProperty.call(body, 'potongan_items')) {
+    return (Array.isArray(body.potongan_items) ? body.potongan_items : [])
+      .map((item) => ({ keterangan: String(item.keterangan || '').trim(), jumlah: Number(item.jumlah || 0) }))
+      .filter((item) => item.keterangan && item.jumlah > 0);
+  }
+  const jumlah = Number(body.potongan || 0);
+  return jumlah > 0 ? [{ keterangan: 'Potongan', jumlah }] : [];
+}
+
+async function simpanPotongan(conn, pembelianId, items) {
+  for (const item of items) {
+    await conn.query(
+      'INSERT INTO pembelian_potongan (pembelian_id, keterangan, jumlah) VALUES (?, ?, ?)',
+      [pembelianId, item.keterangan, item.jumlah]
+    );
+  }
+}
+
 const getPembelian = asyncHandler(async (req, res) => {
   const { search = '', status = '', start = '', end = '', page = 1, limit = 20 } = req.query;
   const offset = (Number(page) - 1) * Number(limit);
@@ -71,8 +90,12 @@ const getPembelianById = asyncHandler(async (req, res) => {
     'SELECT * FROM pembelian_pembayaran WHERE pembelian_id = ? ORDER BY tanggal_bayar',
     [id]
   );
+  const [potonganItems] = await pool.query(
+    'SELECT id, keterangan, jumlah FROM pembelian_potongan WHERE pembelian_id = ? ORDER BY id',
+    [id]
+  );
 
-  res.json({ ...header, items, pembayaran });
+  res.json({ ...header, items, pembayaran, potongan_items: potonganItems });
 });
 
 const createPembelian = asyncHandler(async (req, res) => {
@@ -84,8 +107,10 @@ const createPembelian = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: 'Tanggal dan minimal satu item wajib diisi.' });
   }
 
+  const potonganItems = rincianPotongan(req.body);
+  const totalPotongan = potonganItems.reduce((sum, item) => sum + item.jumlah, 0);
   const subtotal = items.reduce((sum, it) => sum + Number(it.qty) * Number(it.harga_satuan), 0);
-  const total = Math.max(0, subtotal - Number(potongan || 0));
+  const total = Math.max(0, subtotal - totalPotongan);
   const status = hitungStatus(total, Number(bayar_awal));
   const noTransaksi = 'PB-' + Date.now();
 
@@ -99,9 +124,10 @@ const createPembelian = asyncHandler(async (req, res) => {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [noTransaksi, supplier_id || null, tanggal, total, status, jatuh_tempo || null, catatan || null,
        volume_pagi || 0, volume_sore || 0, angkaAtauNull(kualitas_f), angkaAtauNull(kualitas_s), angkaAtauNull(kualitas_p),
-       angkaAtauNull(kualitas_ts), angkaAtauNull(kualitas_ph), angkaAtauNull(kualitas_w), potongan || 0]
+       angkaAtauNull(kualitas_ts), angkaAtauNull(kualitas_ph), angkaAtauNull(kualitas_w), totalPotongan]
     );
     const pembelianId = result.insertId;
+    await simpanPotongan(conn, pembelianId, potonganItems);
 
     for (const it of items) {
       const subtotal = Number(it.qty) * Number(it.harga_satuan);
@@ -148,6 +174,8 @@ const updatePembelian = asyncHandler(async (req, res) => {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
+    const potonganItems = rincianPotongan(req.body);
+    const totalPotongan = potonganItems.reduce((sum, item) => sum + item.jumlah, 0);
 
     let total;
     if (Array.isArray(items)) {
@@ -157,7 +185,7 @@ const updatePembelian = asyncHandler(async (req, res) => {
       }
       await conn.query('DELETE FROM pembelian_items WHERE pembelian_id = ?', [id]);
 
-      total = Math.max(0, items.reduce((sum, it) => sum + Number(it.qty) * Number(it.harga_satuan), 0) - Number(potongan || 0));
+      total = Math.max(0, items.reduce((sum, it) => sum + Number(it.qty) * Number(it.harga_satuan), 0) - totalPotongan);
       for (const it of items) {
         const subtotal = Number(it.qty) * Number(it.harga_satuan);
         await conn.query(
@@ -177,13 +205,15 @@ const updatePembelian = asyncHandler(async (req, res) => {
       [id]
     );
     const status = hitungStatus(total, sudah_bayar);
+    await conn.query('DELETE FROM pembelian_potongan WHERE pembelian_id = ?', [id]);
+    await simpanPotongan(conn, id, potonganItems);
 
     await conn.query(
       `UPDATE pembelian SET supplier_id=?, tanggal=?, total=?, status=?, jatuh_tempo=?, catatan=?,
        volume_pagi=?, volume_sore=?, kualitas_f=?, kualitas_s=?, kualitas_p=?, kualitas_ts=?, kualitas_ph=?, kualitas_w=?, potongan=? WHERE id=?`,
       [supplier_id || null, tanggal, total, status, jatuh_tempo || null, catatan || null,
        volume_pagi || 0, volume_sore || 0, angkaAtauNull(kualitas_f), angkaAtauNull(kualitas_s), angkaAtauNull(kualitas_p),
-       angkaAtauNull(kualitas_ts), angkaAtauNull(kualitas_ph), angkaAtauNull(kualitas_w), potongan || 0, id]
+       angkaAtauNull(kualitas_ts), angkaAtauNull(kualitas_ph), angkaAtauNull(kualitas_w), totalPotongan, id]
     );
 
     await conn.commit();

@@ -10,6 +10,7 @@ export function printThermalMilkReport(report, { documentNo = '', note = '', doc
   const transactions = report.transaksi || [];
   const payments = report.pembayaran || [];
   const party = report.individu || {};
+  const logoUrl = `${window.location.origin}/img/logo.png`;
   const transactionRows = transactions.length
     ? transactions.map((tx) => {
       const pagi = Number(tx.volume_pagi || 0);
@@ -17,12 +18,15 @@ export function printThermalMilkReport(report, { documentNo = '', note = '', doc
       const jumlah = pagi + sore || Number(tx.qty || 0);
       const quality = [['F', 'kualitas_f'], ['S', 'kualitas_s'], ['P', 'kualitas_p'], ['TS', 'kualitas_ts'], ['pH', 'kualitas_ph'], ['W', 'kualitas_w']]
         .map(([label, key]) => `<div><small>${label}</small><b>${esc(tx[key] ?? '-')}</b></div>`).join('');
+      const deductions = Array.isArray(tx.potongan_items) && tx.potongan_items.length
+        ? tx.potongan_items.map((item) => `<div class="line deduction"><span>${esc(item.keterangan)}</span><span>-${esc(rupiah(item.jumlah))}</span></div>`).join('')
+        : Number(tx.potongan || 0) ? `<div class="line deduction"><span>Potongan</span><span>-${esc(rupiah(tx.potongan))}</span></div>` : '';
       return `<section class="transaction">
         <div class="tx-head line"><b>${esc(tanggalIndo(tx.tanggal))}</b><span>${esc(tx.no_transaksi || '')}</span></div>
         <div class="quality-grid">${quality}</div>
         <div class="volume-grid"><div><small>PAGI</small><b>${esc(angka(pagi))} L</b></div><div><small>SORE</small><b>${esc(angka(sore))} L</b></div><div><small>JUMLAH</small><b>${esc(angka(jumlah))} L</b></div></div>
         <div class="line calc"><span>${esc(angka(jumlah))} L × ${esc(rupiah(tx.harga_satuan || 0))}</span><b>${esc(rupiah(Number(tx.total || 0) + Number(tx.potongan || 0)))}</b></div>
-        ${Number(tx.potongan || 0) ? `<div class="line deduction"><span>Potongan</span><span>-${esc(rupiah(tx.potongan))}</span></div>` : ''}
+        ${deductions}
       </section>`;
     }).join('')
     : '<div class="empty">Belum ada data penerimaan susu.</div>';
@@ -47,7 +51,7 @@ export function printThermalMilkReport(report, { documentNo = '', note = '', doc
   if (!popup) throw new Error('Popup diblokir browser. Izinkan popup untuk mencetak thermal.');
   popup.document.write(`<!doctype html><html><head><title>Data Susu - ${esc(party.nama || '')}</title><style>
     @page{size:80mm auto;margin:3mm}*{box-sizing:border-box}body{width:72mm;margin:0 auto;color:#111;font:10px/1.3 Arial,sans-serif}
-    .center{text-align:center}.brand{font-size:14px;font-weight:800;letter-spacing:.3px}.title{font-size:12px;font-weight:800;margin:7px 0 5px}.sub{font-size:8px}.dash{border-top:1px dashed #111;margin:7px 0}.line{display:flex;justify-content:space-between;gap:6px}.line>:last-child{text-align:right}
+    .center{text-align:center}.thermal-logo{display:block;width:47mm;max-height:18mm;object-fit:contain;margin:0 auto 4px}.brand{font-size:14px;font-weight:800;letter-spacing:.3px}.title{font-size:12px;font-weight:800;margin:7px 0 5px}.sub{font-size:8px}.dash{border-top:1px dashed #111;margin:7px 0}.line{display:flex;justify-content:space-between;gap:6px}.line>:last-child{text-align:right}
     .party{font-size:12px;font-weight:800}.meta{margin:2px 0}.transaction{border:1px solid #222;margin:7px 0;break-inside:avoid}.tx-head{padding:4px 5px;background:#eee;border-bottom:1px solid #222}.tx-head span{font-size:8px}
     .quality-grid{display:grid;grid-template-columns:repeat(6,1fr);border-bottom:1px solid #aaa}.quality-grid div,.volume-grid div{text-align:center;padding:3px 1px;border-right:1px solid #aaa}.quality-grid div:last-child,.volume-grid div:last-child{border-right:0}
     small{display:block;font-size:7px;color:#333}.quality-grid b,.volume-grid b{display:block;font-size:9px}.volume-grid{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid #aaa}.calc{padding:4px 5px;font-size:10px}.deduction{padding:0 5px 4px;color:#333}
@@ -55,7 +59,7 @@ export function printThermalMilkReport(report, { documentNo = '', note = '', doc
     .payment{padding:4px 0;border-bottom:1px dotted #999}.payment small{text-align:left}.empty{text-align:center;padding:14px 0;color:#555}.compact{padding:6px 0}.notes{white-space:pre-wrap;margin-top:7px}.footer{margin:12px 0 4px;text-align:center;font-size:8px}
     @media print{body{width:72mm}}
   </style></head><body>
-    <div class="center"><div class="brand">MITRAYASA DAIRY NATURAL</div><div class="sub">Jl. Pagerageung No. 28, Tasikmalaya · 0813 8538 9191</div><div class="title">${esc(documentTitle)}</div></div>
+    <div class="center"><img class="thermal-logo" src="${esc(logoUrl)}" alt="Mitrayasa"><div class="brand">MITRAYASA DAIRY NATURAL</div><div class="sub">Jl. Pagerageung No. 28, Tasikmalaya · 0813 8538 9191</div><div class="title">${esc(documentTitle)}</div></div>
     <div class="dash"></div><div class="party">${esc(party.nama || 'Supplier')}</div>
     ${party.alamat || party.telepon ? `<div class="sub">${esc(party.alamat || party.telepon)}</div>` : ''}
     ${documentNo ? `<div class="meta line"><span>${esc(numberLabel)}</span><span>${esc(documentNo)}</span></div>` : ''}

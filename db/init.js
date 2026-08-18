@@ -51,6 +51,13 @@ async function initDb() {
   await pool.query('ALTER TABLE produk MODIFY stok DECIMAL(12,2) DEFAULT 0, MODIFY stok_minimum DECIMAL(12,2) DEFAULT 0');
   await pool.query('ALTER TABLE pembelian_items MODIFY qty DECIMAL(12,2) NOT NULL');
   await pool.query('ALTER TABLE penjualan_items MODIFY qty DECIMAL(12,2) NOT NULL');
+  // Konversi potongan lama menjadi satu rincian generik, hanya bila belum pernah dimigrasikan.
+  await pool.query(`
+    INSERT INTO pembelian_potongan (pembelian_id, keterangan, jumlah)
+    SELECT p.id, 'Potongan', p.potongan FROM pembelian p
+    WHERE p.potongan > 0
+      AND NOT EXISTS (SELECT 1 FROM pembelian_potongan pp WHERE pp.pembelian_id = p.id)
+  `);
   const [refColumns] = await pool.query("SHOW COLUMNS FROM nota LIKE 'referensi_id'");
   if (refColumns[0] && refColumns[0].Null === 'NO') {
     await pool.query('ALTER TABLE nota MODIFY referensi_id INT NULL');

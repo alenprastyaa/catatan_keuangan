@@ -172,6 +172,25 @@ function drawPaymentsTable(doc, payments, startY) {
   return doc.lastAutoTable.finalY + 10;
 }
 
+function drawDeductions(doc, items, startY) {
+  if (!items?.length) return startY;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(...TEXT);
+  doc.text('Rincian Potongan', 14, startY);
+  doc.autoTable({
+    startY: startY + 4,
+    head: [['Keterangan', 'Jumlah']],
+    body: items.map((item) => [item.keterangan, `-${rupiah(item.jumlah)}`]),
+    theme: 'plain',
+    styles: { fontSize: 9, cellPadding: { top: 3.2, bottom: 3.2, left: 4, right: 4 }, textColor: TEXT },
+    headStyles: { fillColor: NAVY, textColor: 255, fontStyle: 'bold' },
+    columnStyles: { 1: { halign: 'right', cellWidth: 48 } },
+    margin: { left: 14, right: 14 },
+  });
+  return doc.lastAutoTable.finalY + 10;
+}
+
 function drawTotals(doc, { subtotal, pajak, total }, startY) {
   const pageW = doc.internal.pageSize.getWidth();
   const boxW = 85;
@@ -337,6 +356,7 @@ export async function downloadInvoicePdf(detail) {
     const paid = (detail.pembayaran || []).reduce((sum, p) => sum + Number(p.jumlah_bayar || 0), 0);
     const total = Number(detail.transaksi?.total || 0);
     y = drawPaymentsTable(doc, detail.pembayaran || [], y);
+    y = drawDeductions(doc, detail.potongan_items || detail.transaksi?.potongan_items || [], y);
     y = drawPurchaseTotals(doc, { total, paid, remaining: Math.max(0, total - paid) }, y);
   } else {
     y = drawTotals(doc, { subtotal: detail.transaksi?.total, pajak: 0, total: detail.transaksi?.total }, y);

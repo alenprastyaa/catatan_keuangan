@@ -91,7 +91,11 @@ const getNotaById = asyncHandler(async (req, res) => {
      FROM pembelian_pembayaran WHERE pembelian_id = ? ORDER BY tanggal_bayar, id`,
     [nota.referensi_id]
   );
-  res.json({ ...nota, transaksi: header, items, pembayaran });
+  const [potonganItems] = await pool.query(
+    'SELECT id, keterangan, jumlah FROM pembelian_potongan WHERE pembelian_id = ? ORDER BY id',
+    [nota.referensi_id]
+  );
+  res.json({ ...nota, transaksi: { ...header, potongan_items: potonganItems }, items, pembayaran, potongan_items: potonganItems });
 });
 
 const createNota = asyncHandler(async (req, res) => {

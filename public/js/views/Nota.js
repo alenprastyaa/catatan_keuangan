@@ -3,8 +3,8 @@ import { rupiah, todayStr, tanggalIndo } from '../format.js';
 import DataTable from '../components/DataTable.js';
 import Pagination from '../components/Pagination.js';
 import Modal from '../components/Modal.js';
-import { downloadInvoicePdf } from '../invoicePdf.js?v=20260818-2';
-import { printThermalInvoice } from '../thermalPrint.js?v=20260818-2';
+import { downloadInvoicePdf } from '../invoicePdf.js?v=20260818-4';
+import { printThermalInvoice } from '../thermalPrint.js?v=20260818-4';
 
 const STATUS_BADGE = { paid: 'badge-success', unpaid: 'badge-warning', overdue: 'badge-danger' };
 
@@ -334,6 +334,10 @@ export default {
                   </tr>
                 </tbody>
               </table>
+            </div>
+            <div v-if="detail.potongan_items?.length" class="detail-deduction-list">
+              <strong>Rincian Potongan</strong>
+              <div v-for="item in detail.potongan_items" :key="item.id" class="detail-deduction-row"><span>{{ item.keterangan }}</span><span>-{{ rupiah(item.jumlah) }}</span></div>
             </div>
           </template>
 

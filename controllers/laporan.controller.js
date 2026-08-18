@@ -203,6 +203,20 @@ const laporanIndividu = asyncHandler(async (req, res) => {
        ORDER BY pp.tanggal_bayar, pp.id`,
       params
     );
+    if (transaksi.length) {
+      const ids = transaksi.map((row) => row.id);
+      const [potonganRows] = await pool.query(
+        `SELECT pembelian_id, id, keterangan, jumlah FROM pembelian_potongan
+         WHERE pembelian_id IN (${ids.map(() => '?').join(',')}) ORDER BY id`,
+        ids
+      );
+      const byTransaction = potonganRows.reduce((map, row) => {
+        if (!map[row.pembelian_id]) map[row.pembelian_id] = [];
+        map[row.pembelian_id].push(row);
+        return map;
+      }, {});
+      transaksi = transaksi.map((row) => ({ ...row, potongan_items: byTransaction[row.id] || [] }));
+    }
   } else {
     [transaksi] = await pool.query(
       `SELECT t.*, (COALESCE(t.volume_pagi,0)+COALESCE(t.volume_sore,0)) AS volume_liter,

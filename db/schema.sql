@@ -119,6 +119,15 @@ CREATE TABLE IF NOT EXISTS pembelian_pembayaran (
   FOREIGN KEY (pembelian_id) REFERENCES pembelian(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS pembelian_potongan (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  pembelian_id INT NOT NULL,
+  keterangan VARCHAR(150) NOT NULL,
+  jumlah DECIMAL(15,2) NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (pembelian_id) REFERENCES pembelian(id) ON DELETE CASCADE
+);
+
 -- =========================
 -- PENJUALAN
 -- =========================

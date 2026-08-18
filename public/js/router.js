@@ -4,12 +4,12 @@ import MainLayout from './layouts/MainLayout.js';
 import Login from './views/Login.js';
 import Dashboard from './views/Dashboard.js';
 import Produk from './views/Produk.js';
-import Pembelian from './views/Pembelian.js?v=20260818-3';
+import Pembelian from './views/Pembelian.js?v=20260818-4';
 import Penjualan from './views/Penjualan.js?v=20260811-4';
 import ManajemenUser from './views/ManajemenUser.js';
 import PengeluaranKas from './views/PengeluaranKas.js';
-import Nota from './views/Nota.js?v=20260818-2';
-import Laporan from './views/Laporan.js?v=20260816-2';
+import Nota from './views/Nota.js?v=20260818-4';
+import Laporan from './views/Laporan.js?v=20260818-4';
 
 const routes = [
   { path: '/login', component: Login },

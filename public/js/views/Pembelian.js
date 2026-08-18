@@ -3,13 +3,14 @@ import { rupiah, todayStr, tanggalIndo } from '../format.js';
 import DataTable from '../components/DataTable.js';
 import Pagination from '../components/Pagination.js';
 import Modal from '../components/Modal.js';
-import { printThermalInvoice } from '../thermalPrint.js?v=20260818-1';
+import { printThermalInvoice } from '../thermalPrint.js?v=20260818-4';
 
 const STATUS_BADGE = { lunas: 'badge-success', hutang: 'badge-danger', sebagian: 'badge-warning' };
 
 const emptyForm = () => ({
   id: null, supplier_id: '', tanggal: todayStr(), jatuh_tempo: '', catatan: '',
-  bayar_awal: 0, buat_nota: false, input_type: 'qty', waktu_volume: 'pagi', volume_pagi: 0, volume_sore: 0, potongan: 0,
+  bayar_awal: 0, buat_nota: false, input_type: 'qty', waktu_volume: 'pagi', volume_pagi: 0, volume_sore: 0,
+  potongan_items: [{ keterangan: '', jumlah: 0 }],
   kualitas_f: '', kualitas_s: '', kualitas_p: '', kualitas_ts: '', kualitas_ph: '', kualitas_w: '',
   items: [{ produk_id: '', qty: 1, harga_satuan: 0 }],
 });
@@ -42,7 +43,10 @@ export default {
   },
   computed: {
     formTotal() {
-      return Math.max(0, this.form.items.reduce((s, it) => s + this.itemTotal(it), 0) - Number(this.form.potongan || 0));
+      return Math.max(0, this.form.items.reduce((s, it) => s + this.itemTotal(it), 0) - this.formPotongan);
+    },
+    formPotongan() {
+      return (this.form.potongan_items || []).reduce((sum, item) => sum + Number(item.jumlah || 0), 0);
     },
     formVolume() {
       if (this.form.input_type !== 'volume') return 0;
@@ -96,7 +100,10 @@ export default {
         input_type: Number(d.volume_pagi || 0) + Number(d.volume_sore || 0) > 0 ? 'volume' : 'qty',
         waktu_volume: Number(d.volume_sore || 0) > 0 ? 'sore' : 'pagi',
         volume_pagi: Number(d.volume_pagi || 0), volume_sore: Number(d.volume_sore || 0),
-        potongan: Number(d.potongan || 0), kualitas_f: d.kualitas_f ?? '', kualitas_s: d.kualitas_s ?? '',
+        potongan_items: d.potongan_items?.length
+          ? d.potongan_items.map((item) => ({ keterangan: item.keterangan, jumlah: Number(item.jumlah) }))
+          : [{ keterangan: '', jumlah: 0 }],
+        kualitas_f: d.kualitas_f ?? '', kualitas_s: d.kualitas_s ?? '',
         kualitas_p: d.kualitas_p ?? '', kualitas_ts: d.kualitas_ts ?? '', kualitas_ph: d.kualitas_ph ?? '', kualitas_w: d.kualitas_w ?? '',
         items: d.items.map((it) => ({ produk_id: it.produk_id, qty: it.qty, harga_satuan: it.harga_satuan })),
       };
@@ -125,6 +132,16 @@ export default {
     },
     removeItemRow(idx) {
       this.form.items.splice(idx, 1);
+    },
+    addPotonganRow() {
+      this.form.potongan_items.push({ keterangan: '', jumlah: 0 });
+    },
+    removePotonganRow(index) {
+      if (this.form.potongan_items.length === 1) {
+        this.form.potongan_items[0] = { keterangan: '', jumlah: 0 };
+        return;
+      }
+      this.form.potongan_items.splice(index, 1);
     },
     onProdukChange(item) {
       const p = this.produkList.find((x) => x.id === Number(item.produk_id));
@@ -156,6 +173,7 @@ export default {
         const volume = this.form.input_type === 'volume' ? items.reduce((sum, it) => sum + Number(it.qty || 0), 0) : 0;
         const payload = {
           ...this.form, items,
+          potongan: this.formPotongan,
           volume_pagi: this.form.input_type === 'volume' && this.form.waktu_volume === 'pagi' ? volume : 0,
           volume_sore: this.form.input_type === 'volume' && this.form.waktu_volume === 'sore' ? volume : 0,
         };
@@ -277,9 +295,14 @@ export default {
             <div class="purchase-extra-card">
               <div class="purchase-extra-icon deduction">−</div>
               <div class="field">
-                <label>Potongan Pembayaran (Rp)</label>
-                <input type="number" min="0" v-model.number="form.potongan" placeholder="0" style="width:100%" />
-                <small class="text-muted">Potongan akan mengurangi total transaksi.</small>
+                <label>Rincian Potongan</label>
+                <div v-for="(item, index) in form.potongan_items" :key="index" class="deduction-item-row">
+                  <input v-model="item.keterangan" maxlength="150" placeholder="Keterangan potongan" />
+                  <input type="number" min="0" v-model.number="item.jumlah" placeholder="Jumlah (Rp)" />
+                  <button type="button" class="btn-danger btn-sm" title="Hapus potongan" @click="removePotonganRow(index)">&times;</button>
+                </div>
+                <div class="deduction-footer"><button type="button" class="btn-secondary btn-sm" @click="addPotonganRow">+ Tambah Potongan</button><strong>{{ rupiah(formPotongan) }}</strong></div>
+                <small class="text-muted">Total seluruh potongan akan mengurangi nilai transaksi.</small>
               </div>
             </div>
           </div>
@@ -388,6 +411,10 @@ export default {
           <div class="transaction-metrics">
             <span><b>Volume:</b> {{ Number(detail.volume_pagi || 0) + Number(detail.volume_sore || 0) }} L (Pagi {{ detail.volume_pagi || 0 }} / Sore {{ detail.volume_sore || 0 }})</span>
             <span><b>Kualitas:</b> F {{ detail.kualitas_f ?? '-' }} · S {{ detail.kualitas_s ?? '-' }} · P {{ detail.kualitas_p ?? '-' }} · TS {{ detail.kualitas_ts ?? '-' }} · PH {{ detail.kualitas_ph ?? '-' }} · W {{ detail.kualitas_w ?? '-' }}</span>
+          </div>
+          <div v-if="detail.potongan_items?.length" class="detail-deduction-list">
+            <strong>Rincian Potongan</strong>
+            <div v-for="item in detail.potongan_items" :key="item.id" class="detail-deduction-row"><span>{{ item.keterangan }}</span><span>-{{ rupiah(item.jumlah) }}</span></div>
           </div>
 
           <div class="table-wrap" style="margin-bottom:14px">

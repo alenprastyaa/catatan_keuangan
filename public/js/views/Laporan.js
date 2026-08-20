@@ -1,9 +1,9 @@
 import { api } from '../api.js';
 import { rupiah, tanggalIndo, todayStr } from '../format.js';
 import PeriodFilter from '../components/PeriodFilter.js';
-import { downloadReportPdf } from '../pdf.js?v=20260816-1';
+import { downloadReportPdf } from '../pdf.js?v=20260820-1';
 import { downloadCsv } from '../csv.js';
-import { printThermalMilkReport } from '../thermalPrint.js?v=20260818-5';
+import { printThermalMilkReport } from '../thermalPrint.js?v=20260820-1';
 
 const TABS = [
   ['pelanggan-supplier', 'Pelanggan/Supplier'],
@@ -320,6 +320,7 @@ export default {
         if (this.individuTipe === 'supplier') {
           downloadReportPdf({
             ...common,
+            orientation: 'portrait',
             title: 'Data Penerimaan / Pembayaran Susu',
             subtitle: `${this.result.individu.nama} · ${common.subtitle || ''}`,
             stats: [
@@ -345,14 +346,18 @@ export default {
                   rupiah(r.total),
                 ], [{ content: `Kualitas: ${this.transactionQualityText(r)}`, colSpan: 8, styles: { fillColor: [246, 247, 252], textColor: [80, 86, 108], fontStyle: 'bold', halign: 'left' } }]]),
                 foot: ['TOTAL', `${this.milkReportTotals.pagi} L`, `${this.milkReportTotals.sore} L`, `${this.result.ringkasan.total_volume} L`, '-', rupiah(this.milkReportTotals.gross), `-${rupiah(this.milkReportTotals.potongan)}`, rupiah(this.milkReportTotals.net)],
-                columnStyles: { 0: { cellWidth: 31 }, 6: { cellWidth: 42 } },
+                columnStyles: {
+                  0: { cellWidth: 33 }, 1: { cellWidth: 17, halign: 'right' }, 2: { cellWidth: 17, halign: 'right' },
+                  3: { cellWidth: 18, halign: 'right' }, 4: { cellWidth: 20, halign: 'right' }, 5: { cellWidth: 28, halign: 'right' },
+                  6: { cellWidth: 22, halign: 'right' }, 7: { cellWidth: 28, halign: 'right' },
+                },
               },
               {
                 heading: 'Riwayat Pembayaran',
                 columns: ['Tanggal', 'No. Transaksi', 'Jumlah', 'Keterangan'],
                 rows: (this.result.pembayaran || []).map((p) => [tanggalIndo(p.tanggal_bayar), p.no_transaksi || '-', rupiah(p.jumlah_bayar), p.keterangan || '-']),
                 foot: ['', '', 'Total Dibayar', rupiah(this.result.ringkasan.total_bayar)],
-                columnStyles: {},
+                columnStyles: { 2: { halign: 'right' } },
               },
             ],
           });

@@ -31,26 +31,39 @@ const STATUS_COLOR = {
   unpaid: C.warning,
 };
 
+// Turun-in ukuran font sampai teks muat dalam satu baris selebar maxWidth.
+function fitFontSize(doc, text, maxWidth, { start, min = 7, step = 0.4 } = {}) {
+  let size = start;
+  doc.setFontSize(size);
+  while (size > min && doc.getTextWidth(String(text)) > maxWidth) {
+    size -= step;
+    doc.setFontSize(size);
+  }
+  return size;
+}
+
 function drawHeader(doc, { title, subtitle, meta }, logoDataUrl) {
   const pageW = doc.internal.pageSize.getWidth();
   const H = 36;
   const wBottom = pageW * 0.34;
   const wTop = pageW * 0.44;
+  const titleMaxW = wBottom - 20;
 
   doc.setFillColor(...C.navy);
   doc.rect(0, 0, wBottom, H, 'F');
   doc.triangle(wBottom, 0, wTop, 0, wBottom, H, 'F');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(String(title).length > 28 ? 11.5 : 15.5);
+  const titleText = String(title).toUpperCase();
+  fitFontSize(doc, titleText, titleMaxW, { start: 15.5, min: 8 });
   doc.setTextColor(255, 255, 255);
-  doc.text(String(title).toUpperCase(), 14, 17, { maxWidth: wBottom - 20 });
+  doc.text(titleText, 14, 17);
 
   if (subtitle) {
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.2);
+    fitFontSize(doc, subtitle, titleMaxW, { start: 8.2, min: 6.4 });
     doc.setTextColor(203, 208, 232);
-    doc.text(subtitle, 14, 26, { maxWidth: wBottom - 20 });
+    doc.text(String(subtitle), 14, 26, { maxWidth: titleMaxW });
   }
 
   if (logoDataUrl) {
@@ -78,35 +91,52 @@ function drawHeader(doc, { title, subtitle, meta }, logoDataUrl) {
 
 function drawStats(doc, stats, startY) {
   const pageW = doc.internal.pageSize.getWidth();
+  const usableW = pageW - 28;
   const gap = 5;
-  const cardW = (pageW - 28 - gap * (stats.length - 1)) / stats.length;
+  const minCardW = 33;
   const cardH = 19;
+  const rowGap = 5;
 
-  stats.forEach((s, i) => {
-    const x = 14 + i * (cardW + gap);
+  const maxPerRow = Math.max(1, Math.min(stats.length, Math.floor((usableW + gap) / (minCardW + gap))));
+  const rowCount = Math.ceil(stats.length / maxPerRow);
+  const perRow = Math.ceil(stats.length / rowCount);
+  let y = startY;
 
-    doc.setFillColor(...C.cardBg);
-    doc.setDrawColor(...C.border);
-    doc.setLineWidth(0.25);
-    doc.roundedRect(x, startY, cardW, cardH, 3.2, 3.2, 'FD');
+  for (let i = 0; i < stats.length; i += perRow) {
+    const rowStats = stats.slice(i, i + perRow);
+    const cardW = (usableW - gap * (rowStats.length - 1)) / rowStats.length;
+    const textMaxW = cardW - 8.5 - 4;
 
-    // aksen kecil di kiri kartu
-    const accentColor = s.accent || C.primary;
-    doc.setFillColor(...accentColor);
-    doc.roundedRect(x + 4, startY + 5.4, 1.5, 8.2, 0.75, 0.75, 'F');
+    rowStats.forEach((s, j) => {
+      const x = 14 + j * (cardW + gap);
 
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6.6);
-    doc.setTextColor(...C.muted);
-    doc.text(String(s.label).toUpperCase(), x + 8.5, startY + 8);
+      doc.setFillColor(...C.cardBg);
+      doc.setDrawColor(...C.border);
+      doc.setLineWidth(0.25);
+      doc.roundedRect(x, y, cardW, cardH, 3.2, 3.2, 'FD');
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10.5);
-    doc.setTextColor(...(s.accent || C.text));
-    doc.text(String(s.value), x + 8.5, startY + 14.8);
-  });
+      // aksen kecil di kiri kartu
+      const accentColor = s.accent || C.primary;
+      doc.setFillColor(...accentColor);
+      doc.roundedRect(x + 4, y + 5.4, 1.5, 8.2, 0.75, 0.75, 'F');
 
-  return startY + cardH + 9;
+      doc.setFont('helvetica', 'normal');
+      const label = String(s.label).toUpperCase();
+      fitFontSize(doc, label, textMaxW, { start: 6.6, min: 5.2 });
+      doc.setTextColor(...C.muted);
+      doc.text(label, x + 8.5, y + 8);
+
+      doc.setFont('helvetica', 'bold');
+      const value = String(s.value);
+      fitFontSize(doc, value, textMaxW, { start: 10.5, min: 7 });
+      doc.setTextColor(...(s.accent || C.text));
+      doc.text(value, x + 8.5, y + 14.8);
+    });
+
+    y += cardH + rowGap;
+  }
+
+  return y + 4;
 }
 
 function drawSectionHeading(doc, heading, y) {

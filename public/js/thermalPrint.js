@@ -78,7 +78,8 @@ export function printThermalInvoice(detail) {
   const tx = detail.transaksi || {};
   const items = detail.items || [];
   const isPurchase = detail.tipe === 'pembelian';
-  if (isPurchase) {
+  const manual = !!detail.manual;
+  if (isPurchase && !manual) {
     const qty = items.reduce((sum, item) => sum + Number(item.qty || 0), 0);
     const gross = items.reduce((sum, item) => sum + Number(item.subtotal || 0), 0);
     const paid = (detail.pembayaran || []).reduce((sum, payment) => sum + Number(payment.jumlah_bayar || 0), 0);
@@ -94,14 +95,14 @@ export function printThermalInvoice(detail) {
         total_bayar: paid,
         sisa: Math.max(0, total - paid),
       },
-    }, { documentNo: detail.no_invoice, note: detail.keterangan, documentTitle: 'NOTA PEMBAYARAN SUSU', numberLabel: 'No. Nota' });
+    }, { documentNo: detail.no_invoice, note: detail.keterangan, documentTitle: 'NOTA PEMBAYARAN', numberLabel: 'No. Nota' });
   }
   const volume = Number(tx.volume_pagi || 0) + Number(tx.volume_sore || 0);
-  const documentTitle = isPurchase ? 'NOTA PEMBAYARAN SUSU' : 'INVOICE PENJUALAN';
+  const documentTitle = isPurchase ? 'NOTA PEMBAYARAN' : 'INVOICE PENJUALAN';
   const numberLabel = isPurchase ? 'No. Nota' : 'No. Invoice';
   const dateLabel = isPurchase ? 'Tanggal Nota' : 'Tanggal Invoice';
   const rows = items.length
-    ? items.map((it) => `<div class="item"><b>${esc(isPurchase ? tanggalIndo(it.tanggal || tx.tanggal || detail.tanggal) : it.nama_produk || it.nama_item)}</b><div class="line"><span>${esc(it.qty)} ${esc(it.satuan || '')} × ${esc(rupiah(it.harga_satuan))}</span><span>${esc(rupiah(it.subtotal))}</span></div></div>`).join('')
+    ? items.map((it) => `<div class="item"><b>${esc(isPurchase && !manual ? tanggalIndo(it.tanggal || tx.tanggal || detail.tanggal) : it.nama_produk || it.nama_item)}</b><div class="line"><span>${esc(it.qty)} ${esc(it.satuan || '')} × ${esc(rupiah(it.harga_satuan))}</span><span>${esc(rupiah(it.subtotal))}</span></div></div>`).join('')
     : '<div class="empty">— Invoice kosong —</div>';
   const totalPaid = (detail.pembayaran || []).reduce((sum, p) => sum + Number(p.jumlah_bayar || 0), 0);
   const remaining = Math.max(0, Number(tx.total || 0) - totalPaid);
@@ -127,7 +128,7 @@ export function printThermalInvoice(detail) {
     <div class="party">${esc(tx.pihak_nama || 'Umum')}</div><div class="sub">${esc(tx.pihak_alamat || tx.pihak_telepon || '')}</div>
     ${volume || quality ? `<div class="milk"><div class="milk-title">DATA SUSU</div>${volume ? `<div class="line"><span>Pagi ${esc(tx.volume_pagi || 0)} L</span><span>Sore ${esc(tx.volume_sore || 0)} L</span></div><div class="line"><b>Total volume</b><b>${esc(volume)} L</b></div>` : ''}${quality ? `<div class="sub">${quality}</div>` : ''}</div>` : ''}
     <div class="dash"></div>${rows}
-    ${isPurchase ? `<div class="section-title" style="margin-top:8px">RIWAYAT PEMBAYARAN</div>${paymentRows}<div class="line" style="margin-top:7px"><span>Total</span><span>${esc(rupiah(tx.total || 0))}</span></div><div class="line"><span>Sudah dibayar</span><span>${esc(rupiah(totalPaid))}</span></div><div class="line total"><span>SISA</span><span>${esc(rupiah(remaining))}</span></div>` : `<div class="line total"><span>TOTAL</span><span>${esc(rupiah(tx.total || 0))}</span></div>`}
+    ${isPurchase && !manual ? `<div class="section-title" style="margin-top:8px">RIWAYAT PEMBAYARAN</div>${paymentRows}<div class="line" style="margin-top:7px"><span>Total</span><span>${esc(rupiah(tx.total || 0))}</span></div><div class="line"><span>Sudah dibayar</span><span>${esc(rupiah(totalPaid))}</span></div><div class="line total"><span>SISA</span><span>${esc(rupiah(remaining))}</span></div>` : `<div class="line total"><span>TOTAL</span><span>${esc(rupiah(tx.total || 0))}</span></div>`}
     ${tx.potongan ? `<div class="line"><span>Potongan</span><span>${esc(rupiah(tx.potongan))}</span></div>` : ''}
     ${detail.keterangan ? `<div class="notes"><b>Catatan:</b><br>${esc(detail.keterangan)}</div>` : ''}
     <div class="dash"></div><div class="footer">Terima kasih atas kepercayaan Anda<br>Dokumen dicetak ${esc(new Date().toLocaleString('id-ID'))}</div>

@@ -8,8 +8,8 @@ import Pembelian from './views/Pembelian.js?v=20260818-5';
 import Penjualan from './views/Penjualan.js?v=20260811-4';
 import ManajemenUser from './views/ManajemenUser.js';
 import PengeluaranKas from './views/PengeluaranKas.js';
-import Nota from './views/Nota.js?v=20260818-5';
-import Laporan from './views/Laporan.js?v=20260818-7';
+import Nota from './views/Nota.js?v=20260820-1';
+import Laporan from './views/Laporan.js?v=20260820-1';
 
 const routes = [
   { path: '/login', component: Login },

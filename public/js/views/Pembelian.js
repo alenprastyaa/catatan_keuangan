@@ -3,7 +3,7 @@ import { rupiah, todayStr, tanggalIndo } from '../format.js';
 import DataTable from '../components/DataTable.js';
 import Pagination from '../components/Pagination.js';
 import Modal from '../components/Modal.js';
-import { printThermalInvoice } from '../thermalPrint.js?v=20260818-5';
+import { printThermalInvoice } from '../thermalPrint.js?v=20260820-1';
 
 const STATUS_BADGE = { lunas: 'badge-success', hutang: 'badge-danger', sebagian: 'badge-warning' };
 

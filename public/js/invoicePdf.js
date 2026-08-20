@@ -120,10 +120,11 @@ function drawMilkData(doc, transaksi, startY) {
   return startY + 25;
 }
 
-function drawItemsTable(doc, items, startY, { isPurchase = false, tanggal } = {}) {
+function drawItemsTable(doc, items, startY, { isPurchase = false, manual = false, tanggal } = {}) {
+  const showTanggal = isPurchase && !manual;
   const body = items.map((it, i) => [
     String(i + 1),
-    isPurchase ? tanggalShort(it.tanggal || tanggal) : it.nama_produk,
+    showTanggal ? tanggalShort(it.tanggal || tanggal) : it.nama_produk,
     it.satuan ? `${it.qty} ${it.satuan}` : String(it.qty),
     rupiah(it.harga_satuan),
     rupiah(it.subtotal),
@@ -131,7 +132,7 @@ function drawItemsTable(doc, items, startY, { isPurchase = false, tanggal } = {}
 
   doc.autoTable({
     startY,
-    head: [['No', isPurchase ? 'Tanggal' : 'Produk', 'Qty', 'Harga Satuan', 'Subtotal']],
+    head: [['No', showTanggal ? 'Tanggal' : 'Produk', 'Qty', 'Harga Satuan', 'Subtotal']],
     body,
     theme: 'plain',
     styles: { fontSize: 9, cellPadding: { top: 3.6, bottom: 3.6, left: 4, right: 4 }, textColor: TEXT },
@@ -289,7 +290,7 @@ function drawKeterangan(doc, keterangan, startY) {
   return y + boxH + 8;
 }
 
-function drawSignature(doc, logoDataUrl, startY) {
+function drawSignature(doc, logoDataUrl, startY, { showBankInfo = true } = {}) {
   let y = startY;
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9.5);
@@ -301,9 +302,11 @@ function drawSignature(doc, logoDataUrl, startY) {
   if (logoDataUrl) doc.addImage(logoDataUrl, 'PNG', 14, y + 4, sigW, sigH);
 
   y += sigH + 28;
-  doc.setFontSize(8.6);
-  doc.setTextColor(...MUTED);
-  doc.text(`Pembayaran bisa ditransfer ke ${BANK_INFO}`, 14, y);
+  if (showBankInfo) {
+    doc.setFontSize(8.6);
+    doc.setTextColor(...MUTED);
+    doc.text(`Pembayaran bisa ditransfer ke ${BANK_INFO}`, 14, y);
+  }
 }
 
 function drawFooter(doc) {
@@ -337,7 +340,8 @@ export async function downloadInvoicePdf(detail) {
   const logoDataUrl = await getLogoDataUrl().catch(() => null);
 
   const isPurchase = detail.tipe === 'pembelian';
-  const documentTitle = isPurchase ? 'NOTA PEMBAYARAN SUSU' : 'INVOICE PENJUALAN';
+  const manual = !!detail.manual;
+  const documentTitle = isPurchase ? 'NOTA PEMBAYARAN' : 'INVOICE PENJUALAN';
   const numberLabel = isPurchase ? 'No. Nota' : 'No. Invoice';
   const dateLabel = isPurchase ? 'Tanggal Nota' : 'Tanggal Invoice';
   const headerH = drawHeader(doc, logoDataUrl, documentTitle);
@@ -350,9 +354,9 @@ export async function downloadInvoicePdf(detail) {
     pihakNama: detail.transaksi?.pihak_nama || 'Umum',
     pihakSub: detail.transaksi?.pihak_alamat || detail.transaksi?.pihak_telepon || '',
   }, y);
-  if (isPurchase) y = drawMilkData(doc, detail.transaksi, y);
-  y = drawItemsTable(doc, detail.items, y, { isPurchase, tanggal: detail.transaksi?.tanggal || detail.tanggal });
-  if (isPurchase) {
+  if (isPurchase && !manual) y = drawMilkData(doc, detail.transaksi, y);
+  y = drawItemsTable(doc, detail.items, y, { isPurchase, manual, tanggal: detail.transaksi?.tanggal || detail.tanggal });
+  if (isPurchase && !manual) {
     const paid = (detail.pembayaran || []).reduce((sum, p) => sum + Number(p.jumlah_bayar || 0), 0);
     const total = Number(detail.transaksi?.total || 0);
     y = drawPaymentsTable(doc, detail.pembayaran || [], y);
@@ -362,7 +366,7 @@ export async function downloadInvoicePdf(detail) {
     y = drawTotals(doc, { subtotal: detail.transaksi?.total, pajak: 0, total: detail.transaksi?.total }, y);
   }
   y = drawKeterangan(doc, detail.keterangan, y);
-  drawSignature(doc, logoDataUrl, y);
+  drawSignature(doc, logoDataUrl, y, { showBankInfo: !manual });
   drawFooter(doc);
 
   doc.save(`${detail.no_invoice}.pdf`);

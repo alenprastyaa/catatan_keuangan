@@ -3,8 +3,8 @@ import { rupiah, todayStr, tanggalIndo } from '../format.js';
 import DataTable from '../components/DataTable.js';
 import Pagination from '../components/Pagination.js';
 import Modal from '../components/Modal.js';
-import { downloadInvoicePdf } from '../invoicePdf.js?v=20260818-4';
-import { printThermalInvoice } from '../thermalPrint.js?v=20260818-5';
+import { downloadInvoicePdf } from '../invoicePdf.js?v=20260820-1';
+import { printThermalInvoice } from '../thermalPrint.js?v=20260820-1';
 
 const STATUS_BADGE = { paid: 'badge-success', unpaid: 'badge-warning', overdue: 'badge-danger' };
 
@@ -277,7 +277,7 @@ export default {
         <div v-if="detail" class="print-area invoice-doc">
           <div class="invoice-header">
             <div class="invoice-header-diagonal">
-              <span class="invoice-header-title" :class="{ 'invoice-header-title-long': detail.tipe === 'pembelian' }">{{ detail.tipe === 'pembelian' ? 'NOTA PEMBAYARAN SUSU' : 'INVOICE PENJUALAN' }}</span>
+              <span class="invoice-header-title" :class="{ 'invoice-header-title-long': detail.tipe === 'pembelian' }">{{ detail.tipe === 'pembelian' ? 'NOTA PEMBAYARAN' : 'INVOICE PENJUALAN' }}</span>
             </div>
             <img class="invoice-header-logo" src="/img/logo.png" alt="Mitrayasa" />
           </div>
@@ -301,17 +301,17 @@ export default {
             </div>
           </div>
 
-          <div v-if="detail.tipe === 'pembelian'" class="transaction-metrics invoice-milk-metrics">
+          <div v-if="detail.tipe === 'pembelian' && !detail.manual" class="transaction-metrics invoice-milk-metrics">
             <span><b>Volume:</b> {{ Number(detail.transaksi?.volume_pagi || 0) + Number(detail.transaksi?.volume_sore || 0) }} L (Pagi {{ detail.transaksi?.volume_pagi || 0 }} / Sore {{ detail.transaksi?.volume_sore || 0 }})</span>
             <span><b>Kualitas:</b> F {{ detail.transaksi?.kualitas_f ?? '-' }} · S {{ detail.transaksi?.kualitas_s ?? '-' }} · P {{ detail.transaksi?.kualitas_p ?? '-' }} · TS {{ detail.transaksi?.kualitas_ts ?? '-' }} · PH {{ detail.transaksi?.kualitas_ph ?? '-' }} · W {{ detail.transaksi?.kualitas_w ?? '-' }}</span>
           </div>
 
           <div class="table-wrap invoice-table-wrap" style="margin-bottom:14px">
             <table>
-              <thead><tr><th>{{ detail.tipe === 'pembelian' ? 'Tanggal' : 'Produk' }}</th><th class="text-right">Qty</th><th class="text-right">Harga</th><th class="text-right">Subtotal</th></tr></thead>
+              <thead><tr><th>{{ detail.tipe === 'pembelian' && !detail.manual ? 'Tanggal' : 'Produk' }}</th><th class="text-right">Qty</th><th class="text-right">Harga</th><th class="text-right">Subtotal</th></tr></thead>
               <tbody>
                 <tr v-for="it in detail.items" :key="it.id">
-                  <td>{{ detail.tipe === 'pembelian' ? tanggalIndo(it.tanggal || detail.transaksi?.tanggal || detail.tanggal) : it.nama_produk }}</td>
+                  <td>{{ detail.tipe === 'pembelian' && !detail.manual ? tanggalIndo(it.tanggal || detail.transaksi?.tanggal || detail.tanggal) : it.nama_produk }}</td>
                   <td class="text-right">{{ it.satuan ? it.qty + ' ' + it.satuan : it.qty }}</td>
                   <td class="text-right">{{ rupiah(it.harga_satuan) }}</td>
                   <td class="text-right">{{ rupiah(it.subtotal) }}</td>
@@ -320,7 +320,7 @@ export default {
             </table>
           </div>
 
-          <template v-if="detail.tipe === 'pembelian'">
+          <template v-if="detail.tipe === 'pembelian' && !detail.manual">
             <p class="invoice-section-title"><strong>Riwayat Pembayaran</strong></p>
             <div class="table-wrap invoice-table-wrap" style="margin-bottom:14px">
               <table>
@@ -343,7 +343,7 @@ export default {
 
           <div class="invoice-totals">
             <div class="invoice-totals-box">
-              <template v-if="detail.tipe === 'pembelian'">
+              <template v-if="detail.tipe === 'pembelian' && !detail.manual">
                 <div class="row"><span>Total:</span><span>{{ rupiah(detail.transaksi?.total) }}</span></div>
                 <div class="row"><span>Sudah dibayar:</span><span>{{ rupiah(totalPembayaran()) }}</span></div>
                 <div class="row total"><span>SISA:</span><span>{{ rupiah(sisaPembayaran()) }}</span></div>
@@ -366,7 +366,7 @@ export default {
             <img class="invoice-sign-logo" src="/img/logo.png" alt="Mitrayasa" />
             <br/>
             <br/>
-            <p class="text-muted invoice-payment-info">Pembayaran bisa ditransfer ke Bank BSI 7280830806 a.n. Fariz Amroeni</p>
+            <p v-if="!detail.manual" class="text-muted invoice-payment-info">Pembayaran bisa ditransfer ke Bank BSI 7280830806 a.n. Fariz Amroeni</p>
           </div>
 
           <div class="invoice-footer">

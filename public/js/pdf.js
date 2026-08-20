@@ -44,7 +44,7 @@ function fitFontSize(doc, text, maxWidth, { start, min = 7, step = 0.4 } = {}) {
 
 function drawHeader(doc, { title, subtitle, meta }, logoDataUrl) {
   const pageW = doc.internal.pageSize.getWidth();
-  const H = 36;
+  const H = 30;
   const wBottom = pageW * 0.34;
   const wTop = pageW * 0.44;
   const titleMaxW = wBottom - 20;
@@ -55,26 +55,26 @@ function drawHeader(doc, { title, subtitle, meta }, logoDataUrl) {
 
   doc.setFont('helvetica', 'bold');
   const titleText = String(title).toUpperCase();
-  fitFontSize(doc, titleText, titleMaxW, { start: 15.5, min: 8 });
+  fitFontSize(doc, titleText, titleMaxW, { start: 14, min: 8 });
   doc.setTextColor(255, 255, 255);
-  doc.text(titleText, 14, 17);
+  doc.text(titleText, 14, 14);
 
   if (subtitle) {
     doc.setFont('helvetica', 'normal');
-    fitFontSize(doc, subtitle, titleMaxW, { start: 8.2, min: 6.4 });
+    fitFontSize(doc, subtitle, titleMaxW, { start: 8, min: 6.4 });
     doc.setTextColor(203, 208, 232);
-    doc.text(String(subtitle), 14, 26, { maxWidth: titleMaxW });
+    doc.text(String(subtitle), 14, 22, { maxWidth: titleMaxW });
   }
 
   if (logoDataUrl) {
-    const logoW = Math.min(56, pageW * 0.24);
+    const logoW = Math.min(48, pageW * 0.22);
     const logoH = logoW * LOGO_RATIO;
     const logoX = pageW - 14 - logoW;
-    const logoY = (H - logoH) / 2 + 2;
+    const logoY = (H - logoH) / 2 + 1;
     doc.addImage(logoDataUrl, 'PNG', logoX, logoY, logoW, logoH);
   }
 
-  let y = H + 9;
+  let y = H + 7;
   if (meta && meta.length) {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.4);
@@ -82,11 +82,11 @@ function drawHeader(doc, { title, subtitle, meta }, logoDataUrl) {
     doc.text(meta.join('      '), pageW - 14, y, { align: 'right' });
   }
 
-  y += 5;
+  y += 4;
   doc.setFillColor(...C.navy);
   doc.rect(0, y, pageW, 1, 'F');
 
-  return y + 10;
+  return y + 8;
 }
 
 function drawStats(doc, stats, startY) {
@@ -94,8 +94,8 @@ function drawStats(doc, stats, startY) {
   const usableW = pageW - 28;
   const gap = 5;
   const minCardW = 33;
-  const cardH = 19;
-  const rowGap = 5;
+  const cardH = 16;
+  const rowGap = 4;
 
   const maxPerRow = Math.max(1, Math.min(stats.length, Math.floor((usableW + gap) / (minCardW + gap))));
   const rowCount = Math.ceil(stats.length / maxPerRow);
@@ -118,19 +118,19 @@ function drawStats(doc, stats, startY) {
       // aksen kecil di kiri kartu
       const accentColor = s.accent || C.primary;
       doc.setFillColor(...accentColor);
-      doc.roundedRect(x + 4, y + 5.4, 1.5, 8.2, 0.75, 0.75, 'F');
+      doc.roundedRect(x + 4, y + 4.3, 1.5, 7, 0.75, 0.75, 'F');
 
       doc.setFont('helvetica', 'normal');
       const label = String(s.label).toUpperCase();
       fitFontSize(doc, label, textMaxW, { start: 6.6, min: 5.2 });
       doc.setTextColor(...C.muted);
-      doc.text(label, x + 8.5, y + 8);
+      doc.text(label, x + 8.5, y + 6.6);
 
       doc.setFont('helvetica', 'bold');
       const value = String(s.value);
-      fitFontSize(doc, value, textMaxW, { start: 10.5, min: 7 });
+      fitFontSize(doc, value, textMaxW, { start: 10, min: 7 });
       doc.setTextColor(...(s.accent || C.text));
-      doc.text(value, x + 8.5, y + 14.8);
+      doc.text(value, x + 8.5, y + 12.6);
     });
 
     y += cardH + rowGap;
@@ -146,7 +146,7 @@ function drawSectionHeading(doc, heading, y) {
   doc.setFontSize(10.5);
   doc.setTextColor(...C.text);
   doc.text(heading, 18.5, y);
-  return y + 5.5;
+  return y + 5;
 }
 
 function drawFooter(doc) {
@@ -228,7 +228,7 @@ export async function downloadReportPdf({ fileName, title, subtitle, meta = [], 
       body: rows,
       foot: section.foot ? [section.foot] : undefined,
       theme: 'plain',
-      styles: { fontSize: 8.4, cellPadding: { top: 3.2, bottom: 3.2, left: 3.5, right: 3.5 }, textColor: C.text },
+      styles: { fontSize: 8.4, cellPadding: { top: 2.6, bottom: 2.6, left: 3.5, right: 3.5 }, textColor: C.text },
       headStyles: {
         fillColor: C.navy,
         textColor: [224, 227, 245],
@@ -250,7 +250,7 @@ export async function downloadReportPdf({ fileName, title, subtitle, meta = [], 
       },
     });
 
-    y = doc.lastAutoTable.finalY + 11;
+    y = doc.lastAutoTable.finalY + 8;
   });
 
   drawFooter(doc);

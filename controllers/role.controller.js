@@ -3,7 +3,7 @@ const asyncHandler = require('../utils/asyncHandler');
 
 const ALL_MENUS = [
   'dashboard', 'pembelian', 'penjualan', 'produk',
-  'manajemen-user', 'pengeluaran-kas', 'nota', 'laporan',
+  'manajemen-user', 'pengeluaran-kas', 'pemasukan-kas', 'nota', 'laporan',
 ];
 
 const getRoles = asyncHandler(async (req, res) => {

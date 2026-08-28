@@ -1,6 +1,7 @@
 const pool = require('../config/db');
 const asyncHandler = require('../utils/asyncHandler');
 const { resolvePeriode } = require('../utils/periode');
+const { readSaldoAwal } = require('../utils/saldoAwal');
 
 function toDateStr(d) {
   return d.toISOString().slice(0, 10);
@@ -24,15 +25,25 @@ const getSummary = asyncHandler(async (req, res) => {
   const [[{ masuk }]] = await pool.query('SELECT COALESCE(SUM(jumlah_bayar),0) AS masuk FROM penjualan_pembayaran');
   const [[{ keluar_beli }]] = await pool.query('SELECT COALESCE(SUM(jumlah_bayar),0) AS keluar_beli FROM pembelian_pembayaran');
   const [[{ keluar_kas }]] = await pool.query('SELECT COALESCE(SUM(jumlah),0) AS keluar_kas FROM pengeluaran_kas');
-  const kasTerkini = Number(masuk) - Number(keluar_beli) - Number(keluar_kas);
+  const [[{ masuk_lain }]] = await pool.query('SELECT COALESCE(SUM(jumlah),0) AS masuk_lain FROM pemasukan_kas');
+  // Saldo awal mewakili uang yang sudah ada sebelum aplikasi dipakai; tanpa itu
+  // kas terkini selalu minus karena hanya sisi pengeluaran yang lengkap.
+  const saldoAwal = await readSaldoAwal();
+  const kasTerkini =
+    saldoAwal.jumlah + Number(masuk) + Number(masuk_lain) - Number(keluar_beli) - Number(keluar_kas);
 
   // Arus kas periode berjalan: uang yang benar-benar diterima/dikeluarkan,
   // berbeda dari total_penjualan/total_pembelian yang memakai nilai transaksi.
-  const [[{ kas_masuk }]] = await pool.query(
-    `SELECT COALESCE(SUM(jumlah_bayar),0) AS kas_masuk FROM penjualan_pembayaran
+  const [[{ kas_masuk_jual }]] = await pool.query(
+    `SELECT COALESCE(SUM(jumlah_bayar),0) AS kas_masuk_jual FROM penjualan_pembayaran
      WHERE tanggal_bayar BETWEEN ? AND ?`,
     [start, end]
   );
+  const [[{ kas_masuk_lain }]] = await pool.query(
+    'SELECT COALESCE(SUM(jumlah),0) AS kas_masuk_lain FROM pemasukan_kas WHERE tanggal BETWEEN ? AND ?',
+    [start, end]
+  );
+  const kasMasuk = Number(kas_masuk_jual) + Number(kas_masuk_lain);
   const [[{ kas_keluar_beli }]] = await pool.query(
     `SELECT COALESCE(SUM(jumlah_bayar),0) AS kas_keluar_beli FROM pembelian_pembayaran
      WHERE tanggal_bayar BETWEEN ? AND ?`,
@@ -80,8 +91,9 @@ const getSummary = asyncHandler(async (req, res) => {
     total_produk,
     total_stok,
     kas_terkini: kasTerkini,
-    kas_masuk: Number(kas_masuk),
+    kas_masuk: kasMasuk,
     kas_keluar: kasKeluar,
+    saldo_awal: saldoAwal.jumlah,
     total_penjualan,
     total_pembelian,
     total_hutang,

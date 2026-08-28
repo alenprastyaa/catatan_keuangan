@@ -49,6 +49,10 @@ export default {
     };
   },
   computed: {
+    // Kas minus hampir selalu berarti saldo pembuka belum dicatat, bukan usaha rugi.
+    perluSaldoAwal() {
+      return !!this.summary && Number(this.summary.kas_terkini) < 0 && !Number(this.summary.saldo_awal);
+    },
     netCashflow() {
       if (!this.summary) return 0;
       return Number(this.summary.total_penjualan) - Number(this.summary.total_pembelian);
@@ -232,6 +236,10 @@ export default {
             <div>
               <div class="dash-balance-label">Kas Terkini</div>
               <div class="dash-balance-value">{{ rupiah(summary.kas_terkini) }}</div>
+              <div v-if="perluSaldoAwal" class="dash-balance-hint">
+                Kas minus karena saldo awal belum diatur.
+                <a href="#/pemasukan-kas" @click.prevent="go('/pemasukan-kas')">Atur saldo awal</a>
+              </div>
             </div>
             <div class="dash-hero-stats">
               <div class="dash-hero-stat clickable-card" role="link" tabindex="0" @click="go('/laporan')" @keydown.enter="go('/laporan')">

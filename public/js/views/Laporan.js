@@ -122,7 +122,8 @@ export default {
       } else if (this.activeTab === 'kas') {
         rows = [['Tanggal', 'Keterangan', 'Tipe', 'Jumlah', 'Saldo'],
           ...r.data.map((x) => [x.tanggal, x.keterangan, x.tipe, x.jumlah, x.saldo]),
-          [], ['Total Masuk', r.total_masuk], ['Total Keluar', r.total_keluar]];
+          [], ['Saldo Awal', r.saldo_awal], ['Total Masuk', r.total_masuk],
+          ['Total Keluar', r.total_keluar], ['Saldo Akhir', r.saldo_akhir]];
       } else if (this.activeTab === 'penjualan') {
         rows = [['No. Transaksi', 'Tanggal', 'Pembeli', 'Volume (L)', 'Status', 'Total'],
           ...r.data.map((x) => [x.no_transaksi, x.tanggal, x.pembeli_nama, Number(x.volume_pagi || 0) + Number(x.volume_sore || 0), x.status, x.total]),
@@ -217,14 +218,15 @@ export default {
           }],
         });
       } else if (this.activeTab === 'kas') {
-        const saldoAkhir = Number(this.result.total_masuk) - Number(this.result.total_keluar);
+        const saldoAkhir = Number(this.result.saldo_akhir);
         downloadReportPdf({
           ...common,
           title: 'Laporan Kas',
           stats: [
+            { label: 'Saldo Awal', value: rupiah(this.result.saldo_awal) },
             { label: 'Total Masuk', value: rupiah(this.result.total_masuk), accent: [11, 138, 97] },
             { label: 'Total Keluar', value: rupiah(this.result.total_keluar), accent: [207, 52, 52] },
-            { label: 'Saldo Periode', value: rupiah(saldoAkhir), accent: saldoAkhir >= 0 ? [79, 70, 229] : [207, 52, 52] },
+            { label: 'Saldo Akhir', value: rupiah(saldoAkhir), accent: saldoAkhir >= 0 ? [79, 70, 229] : [207, 52, 52] },
           ],
           sections: [
             {
@@ -457,8 +459,10 @@ export default {
         <!-- Kas -->
         <div v-if="activeTab === 'kas'">
           <div class="summary-grid">
+            <div class="card summary-card"><div class="label">Saldo Awal</div><div class="value">{{ rupiah(result.saldo_awal) }}</div></div>
             <div class="card summary-card"><div class="label">Total Masuk</div><div class="value">{{ rupiah(result.total_masuk) }}</div></div>
             <div class="card summary-card"><div class="label">Total Keluar</div><div class="value">{{ rupiah(result.total_keluar) }}</div></div>
+            <div class="card summary-card"><div class="label">Saldo Akhir</div><div class="value">{{ rupiah(result.saldo_akhir) }}</div></div>
           </div>
           <div class="table-wrap">
             <table>

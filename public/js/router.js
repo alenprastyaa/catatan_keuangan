@@ -2,14 +2,15 @@ import { createRouter, createWebHashHistory } from 'vue-router';
 import { store } from './store.js';
 import MainLayout from './layouts/MainLayout.js';
 import Login from './views/Login.js';
-import Dashboard from './views/Dashboard.js?v=20260828-2';
+import Dashboard from './views/Dashboard.js?v=20260828-3';
 import Produk from './views/Produk.js';
 import Pembelian from './views/Pembelian.js?v=20260818-5';
 import Penjualan from './views/Penjualan.js?v=20260811-4';
 import ManajemenUser from './views/ManajemenUser.js';
 import PengeluaranKas from './views/PengeluaranKas.js';
+import PemasukanKas from './views/PemasukanKas.js?v=20260828-3';
 import Nota from './views/Nota.js?v=20260828-1';
-import Laporan from './views/Laporan.js?v=20260820-2';
+import Laporan from './views/Laporan.js?v=20260828-3';
 
 const routes = [
   { path: '/login', component: Login },
@@ -22,6 +23,7 @@ const routes = [
       { path: 'pembelian', component: Pembelian, meta: { menu: 'pembelian' } },
       { path: 'produk', component: Produk, meta: { menu: 'produk' } },
       { path: 'pengeluaran-kas', component: PengeluaranKas, meta: { menu: 'pengeluaran-kas' } },
+      { path: 'pemasukan-kas', component: PemasukanKas, meta: { menu: 'pemasukan-kas' } },
       { path: 'nota', component: Nota, meta: { menu: 'nota' } },
       { path: 'laporan', component: Laporan, meta: { menu: 'laporan' } },
       { path: 'manajemen-user', component: ManajemenUser, meta: { menu: 'manajemen-user' } },

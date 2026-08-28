@@ -180,6 +180,27 @@ CREATE TABLE IF NOT EXISTS pengeluaran_kas (
 );
 
 -- =========================
+-- PEMASUKAN KAS (modal, pinjaman, pendapatan lain di luar penjualan)
+-- =========================
+CREATE TABLE IF NOT EXISTS pemasukan_kas (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  tanggal DATE NOT NULL,
+  tipe VARCHAR(50) NOT NULL,
+  keterangan VARCHAR(255),
+  jumlah DECIMAL(15,2) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =========================
+-- PENGATURAN (key-value, mis. saldo awal kas)
+-- =========================
+CREATE TABLE IF NOT EXISTS pengaturan (
+  kunci VARCHAR(50) PRIMARY KEY,
+  nilai TEXT,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- =========================
 -- NOTA / INVOICE
 -- =========================
 CREATE TABLE IF NOT EXISTS nota (
@@ -220,9 +241,9 @@ INSERT IGNORE INTO roles (id, nama_role) VALUES
 
 INSERT IGNORE INTO menu_access (role_id, menu_key) VALUES
   (1,'dashboard'),(1,'pembelian'),(1,'penjualan'),(1,'produk'),
-  (1,'manajemen-user'),(1,'pengeluaran-kas'),(1,'nota'),(1,'laporan'),
+  (1,'manajemen-user'),(1,'pengeluaran-kas'),(1,'pemasukan-kas'),(1,'nota'),(1,'laporan'),
   (2,'dashboard'),(2,'pembelian'),(2,'penjualan'),(2,'produk'),
-  (2,'pengeluaran-kas'),(2,'nota'),(2,'laporan'),
+  (2,'pengeluaran-kas'),(2,'pemasukan-kas'),(2,'nota'),(2,'laporan'),
   (3,'dashboard'),(3,'penjualan'),(3,'produk'),(3,'nota');
 
 -- Catatan: user admin default dibuat lewat `npm run seed` (perlu hashing password),

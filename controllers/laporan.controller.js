@@ -1,6 +1,7 @@
 const pool = require('../config/db');
 const asyncHandler = require('../utils/asyncHandler');
 const { resolvePeriode } = require('../utils/periode');
+const { readSaldoAwal } = require('../utils/saldoAwal');
 
 const laporanPelangganSupplier = asyncHandler(async (req, res) => {
   const [rows] = await pool.query(`
@@ -77,19 +78,46 @@ const laporanKas = asyncHandler(async (req, res) => {
      FROM pengeluaran_kas WHERE tanggal BETWEEN ? AND ?`,
     [start, end]
   );
+  const [masukLain] = await pool.query(
+    `SELECT tanggal, CONCAT('Pemasukan: ', tipe) AS keterangan, jumlah, 'masuk' AS tipe
+     FROM pemasukan_kas WHERE tanggal BETWEEN ? AND ?`,
+    [start, end]
+  );
 
-  const rows = [...masuk, ...keluarBeli, ...keluarKas].sort((a, b) => new Date(a.tanggal) - new Date(b.tanggal));
+  // Saldo berjalan harus mulai dari posisi kas sebenarnya di awal periode,
+  // yaitu saldo awal usaha ditambah seluruh mutasi sebelum tanggal mulai.
+  const saldoAwalUsaha = await readSaldoAwal();
+  const [[{ mutasi_sebelumnya }]] = await pool.query(
+    `SELECT
+       COALESCE((SELECT SUM(jumlah_bayar) FROM penjualan_pembayaran WHERE tanggal_bayar < ?),0)
+     + COALESCE((SELECT SUM(jumlah) FROM pemasukan_kas WHERE tanggal < ?),0)
+     - COALESCE((SELECT SUM(jumlah_bayar) FROM pembelian_pembayaran WHERE tanggal_bayar < ?),0)
+     - COALESCE((SELECT SUM(jumlah) FROM pengeluaran_kas WHERE tanggal < ?),0) AS mutasi_sebelumnya`,
+    [start, start, start, start]
+  );
+  const saldoAwalPeriode = saldoAwalUsaha.jumlah + Number(mutasi_sebelumnya);
 
-  let saldo = 0;
+  const rows = [...masuk, ...masukLain, ...keluarBeli, ...keluarKas].sort(
+    (a, b) => new Date(a.tanggal) - new Date(b.tanggal)
+  );
+
+  let saldo = saldoAwalPeriode;
   const dataWithSaldo = rows.map((r) => {
     saldo += r.tipe === 'masuk' ? Number(r.jumlah) : -Number(r.jumlah);
     return { ...r, saldo };
   });
 
-  const totalMasuk = masuk.reduce((s, r) => s + Number(r.jumlah), 0);
+  const totalMasuk = [...masuk, ...masukLain].reduce((s, r) => s + Number(r.jumlah), 0);
   const totalKeluar = [...keluarBeli, ...keluarKas].reduce((s, r) => s + Number(r.jumlah), 0);
 
-  res.json({ periode: { start, end }, data: dataWithSaldo, total_masuk: totalMasuk, total_keluar: totalKeluar });
+  res.json({
+    periode: { start, end },
+    data: dataWithSaldo,
+    saldo_awal: saldoAwalPeriode,
+    saldo_akhir: saldo,
+    total_masuk: totalMasuk,
+    total_keluar: totalKeluar,
+  });
 });
 
 const laporanPenjualan = asyncHandler(async (req, res) => {

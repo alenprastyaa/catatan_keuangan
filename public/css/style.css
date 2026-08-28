@@ -1058,3 +1058,13 @@ tbody tr:hover { background: #f8f9fd; }
 @media (max-width: 400px) {
   .login-card { padding: 30px 22px; }
 }
+
+.dash-balance-hint {
+  margin-top: 8px;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+.dash-balance-hint a {
+  color: #fff;
+  text-decoration: underline;
+}

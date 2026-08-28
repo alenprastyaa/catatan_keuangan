@@ -2,7 +2,7 @@ import { createRouter, createWebHashHistory } from 'vue-router';
 import { store } from './store.js';
 import MainLayout from './layouts/MainLayout.js';
 import Login from './views/Login.js';
-import Dashboard from './views/Dashboard.js';
+import Dashboard from './views/Dashboard.js?v=20260828-2';
 import Produk from './views/Produk.js';
 import Pembelian from './views/Pembelian.js?v=20260818-5';
 import Penjualan from './views/Penjualan.js?v=20260811-4';

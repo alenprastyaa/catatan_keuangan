@@ -234,6 +234,20 @@ export default {
               <div class="dash-balance-value">{{ rupiah(summary.kas_terkini) }}</div>
             </div>
             <div class="dash-hero-stats">
+              <div class="dash-hero-stat clickable-card" role="link" tabindex="0" @click="go('/laporan')" @keydown.enter="go('/laporan')">
+                <div class="dash-hero-stat-icon income">&darr;</div>
+                <div>
+                  <div class="stat-label">Pemasukan</div>
+                  <div class="stat-value">{{ rupiah(summary.kas_masuk) }}</div>
+                </div>
+              </div>
+              <div class="dash-hero-stat clickable-card" role="link" tabindex="0" @click="go('/laporan')" @keydown.enter="go('/laporan')">
+                <div class="dash-hero-stat-icon expense">&uarr;</div>
+                <div>
+                  <div class="stat-label">Pengeluaran</div>
+                  <div class="stat-value">{{ rupiah(summary.kas_keluar) }}</div>
+                </div>
+              </div>
               <div class="dash-hero-stat clickable-card" role="link" tabindex="0" @click="go('/penjualan')" @keydown.enter="go('/penjualan')">
                 <div class="dash-hero-stat-icon income">&darr;</div>
                 <div>

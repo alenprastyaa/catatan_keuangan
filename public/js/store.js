@@ -29,6 +29,20 @@ export const store = {
     return res;
   },
 
+  // Menu access disimpan di localStorage saat login, jadi menu yang baru
+  // ditambahkan tidak muncul sampai user login ulang. Segarkan saat aplikasi
+  // dibuka agar perubahan hak akses langsung terlihat.
+  async refreshMenus() {
+    if (!state.token) return;
+    try {
+      const res = await api.get('/auth/me');
+      state.menuAccess = res.menuAccess;
+      localStorage.setItem('ck_menu', JSON.stringify(res.menuAccess));
+    } catch (err) {
+      // token kedaluwarsa atau server tidak terjangkau: biarkan data lama dipakai
+    }
+  },
+
   logout() {
     state.token = null;
     state.user = null;

@@ -1,15 +1,15 @@
 import { api } from '../api.js';
-import { rupiah, todayStr, tanggalIndo } from '../format.js';
+import { rupiah, todayStr, tanggalIndo, judulNota, judulDefault } from '../format.js';
 import DataTable from '../components/DataTable.js';
 import Pagination from '../components/Pagination.js';
 import Modal from '../components/Modal.js';
-import { downloadInvoicePdf } from '../invoicePdf.js?v=20260820-1';
-import { printThermalInvoice } from '../thermalPrint.js?v=20260820-1';
+import { downloadInvoicePdf } from '../invoicePdf.js?v=20260828-1';
+import { printThermalInvoice } from '../thermalPrint.js?v=20260828-1';
 
 const STATUS_BADGE = { paid: 'badge-success', unpaid: 'badge-warning', overdue: 'badge-danger' };
 
 const emptyForm = () => ({
-  no_invoice: 'INV-' + Date.now(), tipe: 'penjualan', referensi_id: '',
+  no_invoice: 'INV-' + Date.now(), tipe: 'penjualan', judul: '', referensi_id: '',
   tanggal: todayStr(), jatuh_tempo: '', status: 'unpaid', keterangan: '', manual: false,
   pihak_nama: '', pihak_alamat: '', pihak_telepon: '',
   items: [{ nama_item: '', qty: 1, satuan: 'liter', harga_satuan: 0 }],
@@ -26,7 +26,7 @@ export default {
       loading: false, searchTimer: null,
       referensiList: [],
       showFormModal: false, form: emptyForm(), error: '',
-      showEditModal: false, editForm: { id: null, jatuh_tempo: '', status: 'unpaid', keterangan: '' }, editError: '',
+      showEditModal: false, editForm: { id: null, tipe: '', judul: '', jatuh_tempo: '', status: 'unpaid', keterangan: '' }, editError: '',
       showDetailModal: false, detail: null,
       columns: [
         { key: 'no_invoice', label: 'No. Dokumen' },
@@ -42,7 +42,7 @@ export default {
     this.loadReferensi();
   },
   methods: {
-    rupiah, tanggalIndo,
+    rupiah, tanggalIndo, judulNota, judulDefault,
     nomorLabel(doc) { return doc?.tipe === 'pembelian' ? 'No. Nota' : 'No. Invoice'; },
     tanggalLabel(doc) { return doc?.tipe === 'pembelian' ? 'Tanggal Nota' : 'Tanggal Invoice'; },
     statusBadge(s) { return STATUS_BADGE[s] || 'badge-muted'; },
@@ -98,6 +98,8 @@ export default {
     openEdit(row) {
       this.editForm = {
         id: row.id,
+        tipe: row.tipe,
+        judul: row.judul || '',
         jatuh_tempo: dateInput(row.jatuh_tempo),
         status: row.status,
         keterangan: row.keterangan || '',
@@ -206,6 +208,11 @@ export default {
               </select>
             </div>
           </div>
+          <div class="field">
+            <label>Judul Nota <span class="text-muted">(opsional)</span></label>
+            <input v-model="form.judul" maxlength="40" :placeholder="judulDefault(form.tipe)" style="width:100%" />
+            <small class="text-muted">Kosongkan untuk memakai judul bawaan: {{ judulDefault(form.tipe) }}</small>
+          </div>
           <label class="manual-invoice-toggle"><input type="checkbox" v-model="form.manual" /> Buat nota manual / nota kosong</label>
           <div v-if="form.manual" class="manual-invoice-box">
             <div class="field-row">
@@ -247,6 +254,11 @@ export default {
 
       <Modal :show="showEditModal" title="Edit Nota" @close="showEditModal = false">
         <form @submit.prevent="saveEdit">
+          <div class="field">
+            <label>Judul Nota <span class="text-muted">(opsional)</span></label>
+            <input v-model="editForm.judul" maxlength="40" :placeholder="judulDefault(editForm.tipe)" style="width:100%" />
+            <small class="text-muted">Kosongkan untuk memakai judul bawaan: {{ judulDefault(editForm.tipe) }}</small>
+          </div>
           <div class="field-row">
             <div class="field">
               <label>Jatuh Tempo</label>
@@ -277,7 +289,7 @@ export default {
         <div v-if="detail" class="print-area invoice-doc">
           <div class="invoice-header">
             <div class="invoice-header-diagonal">
-              <span class="invoice-header-title" :class="{ 'invoice-header-title-long': detail.tipe === 'pembelian' }">{{ detail.tipe === 'pembelian' ? 'NOTA PEMBAYARAN' : 'INVOICE PENJUALAN' }}</span>
+              <span class="invoice-header-title" :class="{ 'invoice-header-title-long': judulNota(detail).length > 18 }">{{ judulNota(detail) }}</span>
             </div>
             <img class="invoice-header-logo" src="/img/logo.png" alt="Mitrayasa" />
           </div>

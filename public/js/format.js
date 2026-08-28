@@ -11,3 +11,14 @@ export function tanggalIndo(value) {
 export function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
+
+// Judul bawaan dipakai bila nota tidak punya judul kustom.
+export function judulDefault(tipe) {
+  return tipe === 'pembelian' ? 'NOTA PEMBAYARAN' : 'INVOICE PENJUALAN';
+}
+
+// Judul yang tampil di kop nota: kustom bila diisi, selain itu judul bawaan.
+export function judulNota(detail) {
+  const custom = String(detail?.judul || '').trim();
+  return custom ? custom.toUpperCase() : judulDefault(detail?.tipe);
+}

@@ -5,6 +5,11 @@ function normalizeKeterangan(value) {
   return typeof value === 'string' ? value.trim() || null : null;
 }
 
+// Judul kosong berarti nota memakai judul bawaan sesuai tipenya.
+function normalizeJudul(value) {
+  return typeof value === 'string' ? value.trim().slice(0, 120) || null : null;
+}
+
 function keteranganTerlaluPanjang(value) {
   return typeof value === 'string' && value.length > 1000;
 }
@@ -99,7 +104,7 @@ const getNotaById = asyncHandler(async (req, res) => {
 });
 
 const createNota = asyncHandler(async (req, res) => {
-  const { no_invoice, tipe, referensi_id, tanggal, jatuh_tempo, status, keterangan,
+  const { no_invoice, tipe, judul, referensi_id, tanggal, jatuh_tempo, status, keterangan,
     pihak_nama, pihak_alamat, pihak_telepon, items = [] } = req.body;
   if (!no_invoice || !tipe || !tanggal) {
     return res.status(400).json({ message: 'Nomor nota, tipe, dan tanggal wajib diisi.' });
@@ -114,10 +119,10 @@ const createNota = asyncHandler(async (req, res) => {
   try {
     await conn.beginTransaction();
     const [result] = await conn.query(
-      `INSERT INTO nota (no_invoice, tipe, referensi_id, tanggal, jatuh_tempo, status, keterangan,
+      `INSERT INTO nota (no_invoice, tipe, judul, referensi_id, tanggal, jatuh_tempo, status, keterangan,
        pihak_nama, pihak_alamat, pihak_telepon, total_manual)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [no_invoice, tipe, referensi_id || null, tanggal, jatuh_tempo || null, status || 'unpaid',
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [no_invoice, tipe, normalizeJudul(judul), referensi_id || null, tanggal, jatuh_tempo || null, status || 'unpaid',
        normalizeKeterangan(keterangan), manual ? String(pihak_nama || '').trim() || null : null,
        manual ? String(pihak_alamat || '').trim() || null : null, manual ? String(pihak_telepon || '').trim() || null : null, totalManual]
     );
@@ -141,7 +146,7 @@ const createNota = asyncHandler(async (req, res) => {
 
 const updateNota = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { jatuh_tempo, status, keterangan } = req.body;
+  const { jatuh_tempo, status, keterangan, judul } = req.body;
   if (!['paid', 'unpaid', 'overdue'].includes(status)) {
     return res.status(400).json({ message: 'Status nota tidak valid.' });
   }
@@ -149,8 +154,8 @@ const updateNota = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: 'Keterangan maksimal 1000 karakter.' });
   }
   await pool.query(
-    'UPDATE nota SET jatuh_tempo=?, status=?, keterangan=? WHERE id=?',
-    [jatuh_tempo || null, status, normalizeKeterangan(keterangan), id]
+    'UPDATE nota SET jatuh_tempo=?, status=?, keterangan=?, judul=? WHERE id=?',
+    [jatuh_tempo || null, status, normalizeKeterangan(keterangan), normalizeJudul(judul), id]
   );
   res.json({ message: 'Nota berhasil diperbarui.' });
 });

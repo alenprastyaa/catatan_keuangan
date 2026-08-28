@@ -1,4 +1,4 @@
-import { rupiah, tanggalIndo } from './format.js';
+import { rupiah, tanggalIndo, judulNota } from './format.js';
 
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;',
@@ -95,10 +95,10 @@ export function printThermalInvoice(detail) {
         total_bayar: paid,
         sisa: Math.max(0, total - paid),
       },
-    }, { documentNo: detail.no_invoice, note: detail.keterangan, documentTitle: 'NOTA PEMBAYARAN', numberLabel: 'No. Nota' });
+    }, { documentNo: detail.no_invoice, note: detail.keterangan, documentTitle: judulNota(detail), numberLabel: 'No. Nota' });
   }
   const volume = Number(tx.volume_pagi || 0) + Number(tx.volume_sore || 0);
-  const documentTitle = isPurchase ? 'NOTA PEMBAYARAN' : 'INVOICE PENJUALAN';
+  const documentTitle = judulNota(detail);
   const numberLabel = isPurchase ? 'No. Nota' : 'No. Invoice';
   const dateLabel = isPurchase ? 'Tanggal Nota' : 'Tanggal Invoice';
   const rows = items.length
@@ -123,7 +123,7 @@ export function printThermalInvoice(detail) {
     @media print{body{width:72mm}.no-print{display:none}}
   </style></head><body>
     <div class="center"><img class="thermal-logo" src="${esc(logoUrl)}" alt="Mitrayasa"></div>
-    <div class="dash"></div><div class="center"><b>${documentTitle}</b></div>
+    <div class="dash"></div><div class="center"><b>${esc(documentTitle)}</b></div>
     <div class="meta line"><span>${numberLabel}</span><span>${esc(detail.no_invoice)}</span></div><div class="meta line"><span>${dateLabel}</span><span>${esc(tanggalIndo(detail.tanggal))}</span></div>
     <div class="party">${esc(tx.pihak_nama || 'Umum')}</div><div class="sub">${esc(tx.pihak_alamat || tx.pihak_telepon || '')}</div>
     ${volume || quality ? `<div class="milk"><div class="milk-title">DATA SUSU</div>${volume ? `<div class="line"><span>Pagi ${esc(tx.volume_pagi || 0)} L</span><span>Sore ${esc(tx.volume_sore || 0)} L</span></div><div class="line"><b>Total volume</b><b>${esc(volume)} L</b></div>` : ''}${quality ? `<div class="sub">${quality}</div>` : ''}</div>` : ''}

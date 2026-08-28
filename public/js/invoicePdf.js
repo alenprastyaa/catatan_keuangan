@@ -1,4 +1,4 @@
-import { rupiah } from './format.js';
+import { rupiah, judulNota } from './format.js';
 import { getLogoDataUrl, LOGO_RATIO } from './logo.js';
 
 // Data perusahaan untuk kop & footer invoice — sesuaikan di sini bila berubah.
@@ -31,8 +31,16 @@ function drawHeader(doc, logoDataUrl, documentTitle = 'INVOICE') {
   doc.rect(0, 0, wBottom, H, 'F');
   doc.triangle(wBottom, 0, wTop, 0, wBottom, H, 'F');
 
+  // Judul nota bisa dikustom, jadi fontnya dikecilkan sampai muat di area navy.
+  // Batas kanan dihitung dari sisi miring banner pada baris judul (y = 25).
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(documentTitle.length > 28 ? 15 : documentTitle.length > 12 ? 21 : 28);
+  const titleMaxW = wBottom + (wTop - wBottom) * ((H - 25) / H) - 6 - 14;
+  let titleSize = 28;
+  doc.setFontSize(titleSize);
+  while (titleSize > 7 && doc.getTextWidth(documentTitle) > titleMaxW) {
+    titleSize -= 0.5;
+    doc.setFontSize(titleSize);
+  }
   doc.setTextColor(255, 255, 255);
   doc.text(documentTitle, 14, 25);
 
@@ -341,7 +349,7 @@ export async function downloadInvoicePdf(detail) {
 
   const isPurchase = detail.tipe === 'pembelian';
   const manual = !!detail.manual;
-  const documentTitle = isPurchase ? 'NOTA PEMBAYARAN' : 'INVOICE PENJUALAN';
+  const documentTitle = judulNota(detail);
   const numberLabel = isPurchase ? 'No. Nota' : 'No. Invoice';
   const dateLabel = isPurchase ? 'Tanggal Nota' : 'Tanggal Invoice';
   const headerH = drawHeader(doc, logoDataUrl, documentTitle);

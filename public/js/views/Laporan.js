@@ -3,7 +3,7 @@ import { rupiah, tanggalIndo, todayStr } from '../format.js';
 import PeriodFilter from '../components/PeriodFilter.js';
 import { downloadReportPdf } from '../pdf.js?v=20260820-2';
 import { downloadCsv } from '../csv.js';
-import { printThermalMilkReport } from '../thermalPrint.js?v=20260820-1';
+import { printThermalMilkReport } from '../thermalPrint.js?v=20260828-1';
 
 const TABS = [
   ['pelanggan-supplier', 'Pelanggan/Supplier'],

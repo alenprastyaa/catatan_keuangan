@@ -47,6 +47,7 @@ async function initDb() {
   await addColumnIfMissing('nota', 'pihak_alamat', 'TEXT NULL');
   await addColumnIfMissing('nota', 'pihak_telepon', 'VARCHAR(30) NULL');
   await addColumnIfMissing('nota', 'total_manual', 'DECIMAL(15,2) DEFAULT 0');
+  await addColumnIfMissing('nota', 'judul', 'VARCHAR(120) NULL');
   // Volume susu dapat memiliki pecahan liter; pelebaran INT ke DECIMAL tidak mengubah nilai lama.
   await pool.query('ALTER TABLE produk MODIFY stok DECIMAL(12,2) DEFAULT 0, MODIFY stok_minimum DECIMAL(12,2) DEFAULT 0');
   await pool.query('ALTER TABLE pembelian_items MODIFY qty DECIMAL(12,2) NOT NULL');

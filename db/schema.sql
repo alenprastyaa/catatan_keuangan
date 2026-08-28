@@ -186,6 +186,7 @@ CREATE TABLE IF NOT EXISTS nota (
   id INT AUTO_INCREMENT PRIMARY KEY,
   no_invoice VARCHAR(50) NOT NULL UNIQUE,
   tipe ENUM('penjualan','pembelian') NOT NULL,
+  judul VARCHAR(120) NULL,
   referensi_id INT NULL,
   tanggal DATE NOT NULL,
   jatuh_tempo DATE,

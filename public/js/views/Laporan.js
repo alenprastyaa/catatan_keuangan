@@ -3,6 +3,8 @@ import { rupiah, tanggalIndo, todayStr } from '../format.js';
 import PeriodFilter from '../components/PeriodFilter.js';
 import { downloadReportPdf } from '../pdf.js?v=20260820-2';
 import { downloadCsv } from '../csv.js';
+import { downloadStyledXlsx, RUPIAH_FMT } from '../excel.js?v=20260829-1';
+import { toast } from '../toast.js';
 import { printThermalMilkReport } from '../thermalPrint.js?v=20260828-1';
 
 const TABS = [
@@ -99,8 +101,68 @@ export default {
       this.result = await api.get(url);
       this.loading = false;
     },
-    exportExcel() {
+    // Tanggal dikirim server sebagai 'YYYY-MM-DD'. Dirakit per bagian supaya
+    // Excel menerima tanggal asli tanpa tergeser zona waktu.
+    toExcelDate(value) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value || ''));
+      return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : null;
+    },
+    async exportKasXlsx() {
+      const r = this.result;
+      const periodeLabel = r.periode
+        ? `${tanggalIndo(r.periode.start)} — ${tanggalIndo(r.periode.end)}`
+        : '';
+      const rows = [
+        {
+          no: null, tanggal: null, keterangan: 'Saldo Awal',
+          pemasukan: null, pengeluaran: null, saldo: Number(r.saldo_awal || 0),
+          _emphasis: true,
+        },
+        ...r.data.map((x, i) => ({
+          no: i + 1,
+          tanggal: this.toExcelDate(x.tanggal),
+          keterangan: x.keterangan,
+          pemasukan: x.tipe === 'masuk' ? Number(x.jumlah) : null,
+          pengeluaran: x.tipe === 'keluar' ? Number(x.jumlah) : null,
+          saldo: Number(x.saldo),
+        })),
+      ];
+
+      await downloadStyledXlsx({
+        fileName: `Laporan-Kas-${todayStr()}.xlsx`,
+        sheetName: 'Laporan Kas',
+        title: `Laporan Kas${periodeLabel ? ' ' + periodeLabel : ''}`,
+        subtitle: 'Mitrayasa Dairy Natural',
+        columns: [
+          { header: 'No', key: 'no', width: 6, align: 'center' },
+          { header: 'Tanggal', key: 'tanggal', width: 14, align: 'center', numFmt: 'dd/mm/yyyy' },
+          { header: 'Keterangan', key: 'keterangan', width: 38 },
+          { header: 'Pemasukan', key: 'pemasukan', width: 20, align: 'right', numFmt: RUPIAH_FMT },
+          { header: 'Pengeluaran', key: 'pengeluaran', width: 20, align: 'right', numFmt: RUPIAH_FMT },
+          { header: 'Saldo', key: 'saldo', width: 20, align: 'right', numFmt: RUPIAH_FMT },
+        ],
+        rows,
+        totalRow: {
+          label: 'Total',
+          labelSpan: 3,
+          values: {
+            pemasukan: Number(r.total_masuk || 0),
+            pengeluaran: Number(r.total_keluar || 0),
+            saldo: Number(r.saldo_akhir || 0),
+          },
+        },
+      });
+    },
+    async exportExcel() {
       if (!this.result) return;
+      if (this.activeTab === 'kas') {
+        try {
+          await this.exportKasXlsx();
+        } catch (err) {
+          toast.error(err.message || 'Gagal membuat file Excel.');
+        }
+        return;
+      }
       const tabLabel = this.tabs.find((t) => t[0] === this.activeTab)[1];
       const fileName = `Laporan-${tabLabel.replace(/[\s/]+/g, '-')}-${todayStr()}.csv`;
       const r = this.result;
@@ -119,11 +181,6 @@ export default {
           ['Laba Kotor', r.laba_kotor],
           ['Total Pengeluaran', r.total_pengeluaran],
           ['Laba Bersih', r.laba_bersih]];
-      } else if (this.activeTab === 'kas') {
-        rows = [['Tanggal', 'Keterangan', 'Tipe', 'Jumlah', 'Saldo'],
-          ...r.data.map((x) => [x.tanggal, x.keterangan, x.tipe, x.jumlah, x.saldo]),
-          [], ['Saldo Awal', r.saldo_awal], ['Total Masuk', r.total_masuk],
-          ['Total Keluar', r.total_keluar], ['Saldo Akhir', r.saldo_akhir]];
       } else if (this.activeTab === 'penjualan') {
         rows = [['No. Transaksi', 'Tanggal', 'Pembeli', 'Volume (L)', 'Status', 'Total'],
           ...r.data.map((x) => [x.no_transaksi, x.tanggal, x.pembeli_nama, Number(x.volume_pagi || 0) + Number(x.volume_sore || 0), x.status, x.total]),

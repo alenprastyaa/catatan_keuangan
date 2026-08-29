@@ -10,7 +10,7 @@ import ManajemenUser from './views/ManajemenUser.js';
 import PengeluaranKas from './views/PengeluaranKas.js';
 import PemasukanKas from './views/PemasukanKas.js?v=20260828-4';
 import Nota from './views/Nota.js?v=20260828-1';
-import Laporan from './views/Laporan.js?v=20260828-4';
+import Laporan from './views/Laporan.js?v=20260829-1';
 
 const routes = [
   { path: '/login', component: Login },
